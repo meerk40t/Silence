@@ -1,0 +1,4 @@
+Pillow
+pyusb
+wxPython
+ezdxf
