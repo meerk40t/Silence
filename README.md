@@ -5,6 +5,8 @@ Please do not discuss this outside of `#meerk40t` prior to April 1st, 2021.
 
 The name is a pun as to silence some criticism and an even quieter form of Whisperer.
 
+![silence](https://user-images.githubusercontent.com/3302478/108626384-b0cf5100-7404-11eb-84b2-7dfee1598dc2.png)
+
 # Progress
 
 The gui is finished for the most part. Some code from MeerK40t 0.7.0 is patched in but not yet altered to work. The main guis are all completed. Some added code needs to be pushed circa 0.7.0 in order to ensure this will work.
