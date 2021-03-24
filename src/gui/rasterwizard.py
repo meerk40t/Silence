@@ -9,10 +9,10 @@ from math import ceil
 
 import wx
 
+from .icons import icons8_fantasy_50
 from .mwindow import MWindow
 from ..image.imagetools import RasterScripts
 from svgelements import Matrix, SVGImage
-from .icons import icons8_fantasy_50
 from .laserrender import LaserRender
 from .zmatrix import ZMatrix
 

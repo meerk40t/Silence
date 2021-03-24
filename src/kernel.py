@@ -305,7 +305,7 @@ class Context:
         """
         Return the Active Device in the kernel.
         """
-        return self._kernel.active_device
+        return self._kernel.get_context('/')
 
     @property
     def contexts(self):

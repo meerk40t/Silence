@@ -8,6 +8,9 @@ import sys
 
 import wx
 
+from src.gui.icons import icon_UL, icon_up, icon_UR, icon_left, icon_CC, icon_right, icon_LL, icon_down, icon_LR
+from src.gui.mwindow import MWindow
+from src.gui.rasterwizard import RasterWizard
 from src.kernel import Module
 
 MILS_IN_MM = 39.3701
@@ -22,132 +25,9 @@ def plugin(kernel, lifecycle):
     elif lifecycle == "mainloop":
         kernel_root = kernel.get_context("/")
         meerk40tgui = kernel_root.open("module/SilenceApp")
-        kernel_root.open("window/Silence", None)
+        kernel_root("window open -p / Silence\n")
         meerk40tgui.MainLoop()
 
-
-
-# begin wxGlade: dependencies
-# end wxGlade
-
-# begin wxGlade: extracode
-# end wxGlade
-
-#----------------------------------------------------------------------
-# ICONS
-from wx.lib.embeddedimage import PyEmbeddedImage
-
-theme = False
-icon_r = 230
-icon_g = 230
-icon_b = 230
-
-
-class PyEmbeddedImageTheme(PyEmbeddedImage):
-    def __init__(self, data):
-        super().__init__(data)
-
-    def GetBitmap(self, use_theme=True, resize=None):
-        image = PyEmbeddedImage.GetImage(self)
-        if theme and use_theme:
-            image.Replace(0, 0, 0, icon_r, icon_g, icon_b)
-        if resize is not None:
-            image = image.Scale(*resize)
-        return wx.Bitmap(image)
-
-icon_UR = PyEmbeddedImageTheme(
-    b'iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1B'
-    b'AACxjwv8YQUAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAAGYktHRAD/AP8A/6C9p5MAAAAHdElN'
-    b'RQfhBw0DMQ8FIsIwAAABaUlEQVQ4T82TO4vCQBSFzy5YRCOEICIEAhZpFP+Avyq1pT/FNp2d'
-    b'hUkRsbH2VSipRFF8FSq+rjPDoAnswg4I7gdDDmfC4d6bmy9i4I18y+fb+B+Bm80Gv01KKXAw'
-    b'GKBSqcA0TTiOg263K29ijEYjWi6XdL1eqd/v03a7pePxKPThcKD9fi/05XKhUqnEy3qeQqFA'
-    b'p9OJf9cn0HWd6vU6rVYr8VKj0aBeryd0GIbkeZ7Qw+HwGRQ/vKA4aLfbNJlM6Hw+U6vVotls'
-    b'RrvdTmg2K1osFkLzam3bToQZhiG6icOH+2c6nQ7lcjkRls1mqdlsypsXyovNZokoimBZFtLp'
-    b'tHRfKK/NfD6H67oYj8fSSaIcyBti88b9fpdOks//y9PpFOVy+eelZigHapqGarUKtjLSSfL5'
-    b'ltmfgUwmA9/3pZNEOZAtNmq1GorFonSSKLd8u92wXq/FDFOplHRfKFfIFzqfzyMIAunEAR5b'
-    b'Qz1TAK0tXAAAAABJRU5ErkJggg==')
-
-icon_up = PyEmbeddedImageTheme(
-    b'iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1B'
-    b'AACxjwv8YQUAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAAGYktHRAD/AP8A/6C9p5MAAAAHdElN'
-    b'RQfhBh4SKDBKbF6TAAAAsklEQVQ4T+2TwQ3DIAxFTXdgD1ZhAhCLMRJ7MAQURxRRsF2k5tBD'
-    b'n/QV5JiXw1dUbcAHYoyAayGEPhFAIUcppaaU8INX8IwzCVGYcx6yV3AmIQq11psQZxKs0BhT'
-    b'lVKbEGf4joMUeu830RrnXN9+ZxO2RkkBFdxdGcK10dOszQ8h1ehp5uaHkGr0NHPzl5Br9DRz'
-    b'82CtZZeoOYZ7hy72X26X+omGuQaP/ryNv/B7fl0I8ASb6RkI5xlSYwAAAABJRU5ErkJggg==')
-
-icon_UL = PyEmbeddedImageTheme(
-    b'iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1B'
-    b'AACxjwv8YQUAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAAGYktHRAD/AP8A/6C9p5MAAAAHdElN'
-    b'RQfhBw0DNzTic4ySAAABbklEQVQ4T72UvYrCQBSFZxe1kEQsLKzS2ImPYZXnyKP4DL5EOjsL'
-    b'O60idsEfUNCAoIJRwf8kZzN3r2DWLCSs7AdDhjOXM/fezMwHQsQb+eTv2/gfw+v1Ksbjsbhc'
-    b'LqykQPbwmV6vh3K5LPuKYrGIVqvFK8mIGAZBgEqlQmaPoaoqjscjBoMB+v0+xclNbdumeafT'
-    b'wWw2w+12Q7vdjhput9uI2WNMJhPouo56vU5x1WoVhmHQPJ/Po9FoYL1ef8eT+kStVouYlUol'
-    b'2n2xWGA+n1PMdDrFcrmk+XA4xGazged5lPWLoRRlBtJM0zR0u11eScaLoeR+v9POp9OJleTE'
-    b'GlLqYYayyWmJNTwcDjBNE6vVipXkxB7sTCYjwrMocrkcKylg4whvL/l8PsOyLOz3e1aS8+td'
-    b'Dv+yCG8IKylg4wh/KTn2gfV9X+x2O1EoFEQ2m2U1GbElu64rms2mcByHlRRQnj8YjUZQFIVe'
-    b'knQAX2UyeADJo3o0AAAAAElFTkSuQmCC')
-
-icon_right = PyEmbeddedImageTheme(
-    b'iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1B'
-    b'AACxjwv8YQUAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAAGYktHRAD/AP8A/6C9p5MAAAAHdElN'
-    b'RQfhBh4SKDBKbF6TAAAArElEQVQ4T8WVjQ2FIAyE4e3AHqzCBDAZjMQeDEEfTY5EYw0/IfFL'
-    b'LmJbL2K1KhrgnMNqjqGhUoqstTgbM2WotSZjDJVSqNaKjMyU4VU5Z2Rklg1ZKSVkn2wZskII'
-    b'qLjTcvIFXfz8pDhLalaLy8UzkprV4nLxqnqzNAJHiDGqH9ZHwI6ft7+jvuW2lgtmtNWU5dcG'
-    b'x1ckI5b3HhV3vv/0jgyH4+Pr6IBd+wUQ/QG28O4GJuoU/AAAAABJRU5ErkJggg==')
-
-icon_LR = PyEmbeddedImageTheme(
-    b'iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1B'
-    b'AACxjwv8YQUAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAAGYktHRAD/AP8A/6C9p5MAAAAHdElN'
-    b'RQfhBw0DNxTZHaxaAAABdUlEQVQ4T62UP6rCQBDG5z0LwSgEtLCSgJXiMaxyDs/gCXISj2Bn'
-    b'ISmMnaQL/gEFLUJQ0CAoopJ5u8PE5wZBF/zBwvIxfDszzA6gJsPhEIvFIs5mM1ZUfkETy7Kg'
-    b'2+1CuVxmReVHuvL9I263GxyPRzBNE3K5HKv/aGfoui5UKhWYz+esZKDCNQjDEHu9HsZxzIqK'
-    b'doaGYUCj0YB8Ps9KBjb+mMFgIHuOQRCwoqJteDgccDQa4fl8ZkVFu+Tr9QpRFMH9fmclAxt/'
-    b'zNdLlqVOp1MU88iKipah53lYq9Uow2az+TJLkKLoB+52O3pZImdtuVzSfb1e42azQdE7FANN'
-    b'ZulptVoU84zQAbfbLTqOg4VCgcROp0MZSNrtNtq2jYvFQjFLz36/p7gUkE2Wr69WK9okEpn1'
-    b'eDym+2QyQd/38XQ6YalUUszq9TomSUJxKVo97Pf7KJYCmVWr1cejz2hvm8vlAqKvtMZefT9t'
-    b'w3do/5R3fNkQ4A8hbi5O82i8ZgAAAABJRU5ErkJggg==')
-
-
-icon_LL = PyEmbeddedImageTheme(
-    b'iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1B'
-    b'AACxjwv8YQUAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAAGYktHRAD/AP8A/6C9p5MAAAAHdElN'
-    b'RQfhBw0DNyNhoAlVAAABbUlEQVQ4T72UvarCQBCFJwmxkAiJWFiJkE7yGj5KXsTHSGlrZ2dh'
-    b'5U8jllGbNKIJohC1UFFhbnbuKOayxYoXP9jscEIOM2zOAkro9XoIABiGISvqaOKRfZzjdrvB'
-    b'fr+HcrkMhmGwqobOe47VagVBEECapqy8AfX5h36/j8ViEefzOSvqSEf+BOnIs9kMfN+HJElY'
-    b'UUdqKA5kPB7D+XxmRZ3vjDydTqHZbMJyuWRFHamhrutQKBRA0zRW1JGOfDqdYL1eQ71eB9M0'
-    b'WVVEGL7S7XaxVCpR9CqVCg6HQ36jRs4wO1W0bZvMHqtWq2HWMeV7s9lglh6qD4cDxnFM9fV6'
-    b'xSiKKBA5w8VikTN7LJEYsXc6HRwMBlRPJhNst9tU73Y7bLVaaFlW3vByuWC1Wn0aidVoNDC7'
-    b'LOjmOR6P1K2oxTTZ/0r1/X7H7Xb72xB7PRmNRui6Lpl5nvf2FSY9ZSGJtDiOw4o630nKJ/yz'
-    b'IcAPUHwS0OLE48IAAAAASUVORK5CYII=')
-
-icon_left = PyEmbeddedImageTheme(
-    b'iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1B'
-    b'AACxjwv8YQUAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAAGYktHRAD/AP8A/6C9p5MAAAAHdElN'
-    b'RQfhBh4SKDBKbF6TAAAAmklEQVQ4T62VgQ3AEBBF6Q72sIoJWEyMZA9DuLqmEmlPr9V7yQ+J'
-    b'n584HAUfcM6dszmvA621oBRvf3TUWqGUAsYY0Fr/D8w5HyGjOKaOlNItbDnQe0+GoThujl58'
-    b'Sr2Oj8IQqvjLwkCq+MuKMdILi9raFtsoiPiWMVD8UEZErs2VEAJtbuKYOkSfXke0OSDi7WtE'
-    b'pMFe4b8AgB2kL/31Q2vxXgAAAABJRU5ErkJggg==')
-
-icon_down = PyEmbeddedImageTheme(
-    b'iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAAAAACo4kLRAAAACXBIWXMAAAsTAAALEwEAmpwY'
-    b'AAAAB3RJTUUH4QgSAAc7JebJsQAAAGhJREFUGNPFzsENgCAMheFXd2APVnECdTEdiT0Ygt9D'
-    b'IdDEuz21X5q8Z0iSTD5+bfqYf1H72tM6kS1+WUaQIiYQ1IgVBK2sVhoI4Jn2QEeOYScTewXL'
-    b'rOgVEhFrDw7YigcDYIyM266xvsSUaE4W9c7bAAAAAElFTkSuQmCC')
-
-icon_CC = PyEmbeddedImageTheme(
-    b'iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAAAXNSR0IArs4c6QAAAARnQU1B'
-    b'AACxjwv8YQUAAAAJcEhZcwAADsQAAA7EAZUrDhsAAAAGYktHRAD/AP8A/6C9p5MAAAAHdElN'
-    b'RQfhBw4CFDvfEiO7AAABsElEQVQ4T62VvYrCUBCFT9aoYOWD+AYKlha2gq0gNmKnIlgLWoj4'
-    b'AorvYC02WggWIghWWgtWiv8/d++dzAajSXaV/eASZhIn5849EzUhwT/yxdePUXo2mw1HXFAl'
-    b'c7kcms0mJd+hWCwiGo3idDpRbCq83W7QNI2j31EiDocDkskkMpkM/H6/ecNCuVwWlUqFI2cK'
-    b'hYIIh8PifD5zxsDSQxljt9uRWjculwvi8TgSiQS8Xi9nGaPuK9Vq1VZpqVQSsVhMXK9XzljR'
-    b'ue4L6/WalM5mM7RaLepvKpVCJBJBMBiEx+PhJ5/gwrZMp1Mhm618SkvXdcq54erDdrtt2kEh'
-    b't4lOp8ORPa4F37GRCSu1Rfbv7S07znK9XsdisUA2m6Vt3u93pNNpLJdLDAYD1Go1ftKK4ymr'
-    b'fgUCAYRCISr+Q7fbxWQygTQ0fD4fZx8gnQ80Gg3ymhvKg/1+X8g5FlI5Zw1eDmW1WmG/39PU'
-    b'OKE8qFQOh0Mcj0fOMkZdIeSXhpbi+a1OqDkejUYin8+bvzEVzudzWoq/2kXN8Xg8Rq/Xw3a7'
-    b'pZx5ynz5yHuPB/TPfwHAN0ixPaqOEC/nAAAAAElFTkSuQmCC')
-
-#----------------------------------------------------------------------
 
 _ = wx.GetTranslation
 supported_languages = (
@@ -166,12 +46,9 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
-class Silence(wx.Frame, Module):
-    def __init__(self, context, path, parent, *args, **kwds):
-        # begin wxGlade: Silence.__init__
-        wx.Frame.__init__(self, parent, -1, "", style=wx.DEFAULT_FRAME_STYLE)
-        Module.__init__(self, context, path)
-        self.SetSize((815, 624))
+class Silence(MWindow):
+    def __init__(self, *args, **kwds):
+        super().__init__(815, 624, *args, **kwds)
 
         # Menu Bar
         self.silence_menubar = wx.MenuBar()
@@ -576,7 +453,15 @@ class Silence(wx.Frame, Module):
             wx.EVT_BUTTON, self.on_button_hide_advanced, self.button_hide_advanced
         )
         # end wxGlade
-        self.Show()
+
+        @self.context.console_command("refresh", help="Silence refresh")
+        def refresh(command, channel, _, args=tuple(), **kwargs):
+            self.Layout()
+            self.Update()
+            self.Refresh()
+            channel(_("Refreshed."))
+            return
+
         self.context.setting(str, 'project', None)
         self.context.setting(float, 'jog_step', 10.0)
         self.context.setting(float, 'move_x', 0.0)
@@ -615,48 +500,6 @@ class Silence(wx.Frame, Module):
         self.text_cut_passes.SetValue(str(self.context.cut_passes))
         self.toggle_advance_settings()
 
-        @context.console_command("window", help="wxMeerK40 window information")
-        def window(command, channel, _, args=tuple(), **kwargs):
-            context = self.context
-            if len(args) == 0:
-                channel(_("----------"))
-                channel(_("Windows Registered:"))
-                for i, name in enumerate(context.match("window")):
-                    channel("%d: %s" % (i + 1, name))
-                channel(_("----------"))
-                channel(_("Loaded Windows in Context %s:") % str(context._path))
-                for i, name in enumerate(context.opened):
-                    if not name.startswith("window"):
-                        continue
-                    module = context.opened[name]
-                    channel(_("%d: %s as type of %s") % (i + 1, name, type(module)))
-                channel(_("----------"))
-                channel(_("Loaded Windows in Device %s:") % str(context.active._path))
-                for i, name in enumerate(context.active.opened):
-                    if not name.startswith("window"):
-                        continue
-                    module = context.active.opened[name]
-                    channel(_("%d: %s as type of %s") % (i + 1, name, type(module)))
-                channel(_("----------"))
-            else:
-                if args[0] == "open":
-                    try:
-                        self.context.open("window/%s" % args[1], self)
-                        channel(_("Window Opened."))
-                    except KeyError:
-                        channel(_("No such window as %s" % args[1]))
-                    except IndexError:
-                        raise SyntaxError
-
-        @context.console_command("refresh", help="wxMeerK40 refresh")
-        def refresh(command, channel, _, args=tuple(), **kwargs):
-            self.Layout()
-            self.Update()
-            self.Refresh()
-            channel(_("Refreshed."))
-            return
-
-        self.Bind(wx.EVT_CLOSE, self.on_close, self)
         self.context.listen("rotary_enable", self.on_rotary_enable)
         self.context.listen("halftone", self.on_halftone)
 
@@ -666,22 +509,10 @@ class Silence(wx.Frame, Module):
     def on_rotary_enable(self, *args, **kwargs):
         self.checkbox_rotary_enable.SetValue(self.context.rotary_enable)
 
-    def on_close(self, event):
-        if self.state == 5:
-            event.Veto()
-        else:
-            self.state = 5
-            self.context.close(self.name)
-            self.context.console("quit\n")
-            event.Skip()  # Call destroy as regular.
-
-    def finalize(self, *args, **kwargs):
+    def window_close(self):
+        self.context("quit\n")
         self.context.unlisten("rotary_enable", self.on_rotary_enable)
         self.context.unlisten("halftone", self.on_halftone)
-        try:
-            self.Close()
-        except RuntimeError:
-            pass
 
     def __set_properties(self):
         # begin wxGlade: Silence.__set_properties
@@ -1193,12 +1024,9 @@ class Silence(wx.Frame, Module):
 # end of class Silence
 
 
-class GeneralSettings(wx.Frame, Module):
-    def __init__(self, context, path, parent, *args, **kwds):
-        # begin wxGlade: GeneralSettings.__init__
-        wx.Frame.__init__(self, parent, -1, "", style=wx.DEFAULT_FRAME_STYLE)
-        Module.__init__(self, context, path)
-        self.SetSize((570, 597))
+class GeneralSettings(MWindow):
+    def __init__(self, *args, **kwds):
+        super().__init__(570, 597, *args, **kwds)
         self.panel_5 = wx.Panel(self, wx.ID_ANY)
         self.radio_units_inch = wx.RadioButton(self.panel_5, wx.ID_ANY, "inch")
         self.radio_units_mm = wx.RadioButton(self.panel_5, wx.ID_ANY, "mm")
@@ -1286,8 +1114,6 @@ class GeneralSettings(wx.Frame, Module):
         self.Bind(wx.EVT_TEXT, self.on_text_y_factor, self.text_y_factor)
         self.Bind(wx.EVT_BUTTON, self.on_button_save, self.button_save)
         # end wxGlade
-        self.Show()
-        self.Bind(wx.EVT_CLOSE, self.on_close, self)
         self.context.setting(int, 'units', 0)
         self.context.setting(bool, 'init_home', True)
         self.context.setting(bool, 'finish_unlock', False)
@@ -1327,20 +1153,6 @@ class GeneralSettings(wx.Frame, Module):
         self.text_laser_height.SetValue(str(self.context.bedheight))
         self.text_x_factor.SetValue(str(self.context.x_factor))
         self.text_y_factor.SetValue(str(self.context.y_factor))
-
-    def on_close(self, event):
-        if self.state == 5:
-            event.Veto()
-        else:
-            self.state = 5
-            self.context.close(self.name)
-            event.Skip()  # Call destroy as regular.
-
-    def finalize(self, *args, **kwargs):
-        try:
-            self.Close()
-        except RuntimeError:
-            pass
 
     def __set_properties(self):
         # begin wxGlade: GeneralSettings.__set_properties
@@ -1585,12 +1397,9 @@ class GeneralSettings(wx.Frame, Module):
 # end of class GeneralSettings
 
 
-class RasterSettings(wx.Frame, Module):
-    def __init__(self, context, path, parent, *args, **kwds):
-        # begin wxGlade: RasterSettings.__init__
-        wx.Frame.__init__(self, parent, -1, "", style=wx.DEFAULT_FRAME_STYLE)
-        Module.__init__(self, context, path)
-        self.SetSize((729, 370))
+class RasterSettings(MWindow):
+    def __init__(self, *args, **kwds):
+        super().__init__(729, 370, *args, **kwds)
         self.panel_22 = wx.Panel(self, wx.ID_ANY)
         self.text_scanline_step = wx.TextCtrl(self.panel_22, wx.ID_ANY, "0.002")
         self.check_bottom_up = wx.CheckBox(self.panel_22, wx.ID_ANY, "")
@@ -1645,8 +1454,6 @@ class RasterSettings(wx.Frame, Module):
             self.slider_raster_transition,
         )
         # end wxGlade
-        self.Show()
-        self.Bind(wx.EVT_CLOSE, self.on_close, self)
         self.context.setting(int, 'raster_step', 2)
         self.context.setting(bool, 'raster_bottom', False)
         self.context.setting(bool, 'halftone', True)
@@ -1654,7 +1461,7 @@ class RasterSettings(wx.Frame, Module):
         self.context.setting(float, 'halftone_black', 2.5)
         self.context.setting(float, 'halftone_white', 0.50)
         self.context.setting(float, 'halftone_transition', 3.5)
-        self.text_scanline_step.SetValue(str(context.raster_step / 1000.0))
+        self.text_scanline_step.SetValue(str(self.context.raster_step / 1000.0))
         self.check_bottom_up.SetValue(self.context.raster_bottom)
         self.check_halftone.SetValue(self.context.halftone)
         self.slider_raster_black.SetValue(self.context.halftone_black)
@@ -1673,20 +1480,9 @@ class RasterSettings(wx.Frame, Module):
         self.slider_raster_white.Enable(self.context.halftone)
         self.slider_raster_transition.Enable(self.context.halftone)
 
-    def on_close(self, event):
-        if self.state == 5:
-            event.Veto()
-        else:
-            self.state = 5
-            self.context.close(self.name)
-            event.Skip()  # Call destroy as regular.
 
-    def finalize(self, *args, **kwargs):
+    def window_close(self):
         self.context.unlisten("halftone", self.on_halftone)
-        try:
-            self.Close()
-        except RuntimeError:
-            pass
 
     def __set_properties(self):
         # begin wxGlade: RasterSettings.__set_properties
@@ -1784,12 +1580,9 @@ class RasterSettings(wx.Frame, Module):
 # end of class RasterSettings
 
 
-class RotarySettings(wx.Frame, Module):
-    def __init__(self, context, path, parent, *args, **kwds):
-        # begin wxGlade: RotarySettings.__init__
-        wx.Frame.__init__(self, parent, -1, "", style=wx.DEFAULT_FRAME_STYLE)
-        Module.__init__(self, context, path)
-        self.SetSize((391, 155))
+class RotarySettings(MWindow):
+    def __init__(self, *args, **kwds):
+        super().__init__(391, 155, *args, **kwds)
         self.panel_23 = wx.Panel(self, wx.ID_ANY)
         self.check_rotary_enable = wx.CheckBox(self.panel_23, wx.ID_ANY, "")
         self.text_rotary_scale_y = wx.TextCtrl(self.panel_23, wx.ID_ANY, "1.000")
@@ -1804,8 +1597,6 @@ class RotarySettings(wx.Frame, Module):
         self.Bind(wx.EVT_TEXT, self.on_text_rotary_scale_y, self.text_rotary_scale_y)
         self.Bind(wx.EVT_TEXT, self.on_text_rotary_speed, self.text_rotary_speed_rapid)
         # end wxGlade
-        self.Show()
-        self.Bind(wx.EVT_CLOSE, self.on_close, self)
         self.context.setting(bool, 'rotary_enable', False)
         self.context.setting(float, 'rotary_scale_y', 1.0)
         self.context.setting(float, 'rotary_speed', 0.0)
@@ -1823,20 +1614,8 @@ class RotarySettings(wx.Frame, Module):
         self.check_rotary_enable.SetValue(self.context.rotary_enable)
         self.toggle_disabled()
 
-    def on_close(self, event):
-        if self.state == 5:
-            event.Veto()
-        else:
-            self.state = 5
-            self.context.close(self.name)
-            event.Skip()  # Call destroy as regular.
-
-    def finalize(self, *args, **kwargs):
+    def window_close(self):
         self.context.unlisten("rotary_enable", self.on_rotary_enable)
-        try:
-            self.Close()
-        except RuntimeError:
-            pass
 
     def __set_properties(self):
         # begin wxGlade: RotarySettings.__set_properties
@@ -1903,12 +1682,9 @@ class RotarySettings(wx.Frame, Module):
 # end of class RotarySettings
 
 
-class EgvSave(wx.Frame, Module):
-    def __init__(self, context, path, parent, *args, **kwds):
-        # begin wxGlade: EgvSave.__init__
-        wx.Frame.__init__(self, parent, -1, "", style=wx.DEFAULT_FRAME_STYLE)
-        Module.__init__(self, context, path)
-        self.SetSize((403, 163))
+class EgvSave(MWindow):
+    def __init__(self, *args, **kwds):
+        super().__init__(403, 163, *args, **kwds)
         self.panel_24 = wx.Panel(self, wx.ID_ANY)
         self.check_raster = wx.CheckBox(self.panel_24, wx.ID_ANY, "Raster Engrave")
         self.check_engrave = wx.CheckBox(self.panel_24, wx.ID_ANY, "Vector Engrave")
@@ -1924,23 +1700,6 @@ class EgvSave(wx.Frame, Module):
         self.Bind(wx.EVT_CHECKBOX, self.on_check_egv_cut, self.check_cut)
         self.Bind(wx.EVT_CHECKBOX, self.on_check_egv_gcode, self.check_gcode)
         self.Bind(wx.EVT_BUTTON, self.on_button_save, self.button_save)
-        # end wxGlade
-        self.Show()
-        self.Bind(wx.EVT_CLOSE, self.on_close, self)
-
-    def on_close(self, event):
-        if self.state == 5:
-            event.Veto()
-        else:
-            self.state = 5
-            self.context.close(self.name)
-            event.Skip()  # Call destroy as regular.
-
-    def finalize(self, *args, **kwargs):
-        try:
-            self.Close()
-        except RuntimeError:
-            pass
 
     def __set_properties(self):
         # begin wxGlade: EgvSave.__set_properties
@@ -2037,12 +1796,9 @@ class EgvSave(wx.Frame, Module):
 # end of class EgvSave
 
 
-class TraceBoundary(wx.Frame, Module):
-    def __init__(self, context, path, parent, *args, **kwds):
-        # begin wxGlade: TraceBoundary.__init__
-        wx.Frame.__init__(self, parent, -1, "", style=wx.DEFAULT_FRAME_STYLE)
-        Module.__init__(self, context, path)
-        self.SetSize((400, 300))
+class TraceBoundary(MWindow):
+    def __init__(self, *args, **kwds):
+        super().__init__(400, 300, *args, **kwds)
         self.panel_25 = wx.Panel(self, wx.ID_ANY)
         self.checkbox_trace_laser = wx.CheckBox(self.panel_25, wx.ID_ANY, "")
         self.text_trace_power = wx.TextCtrl(self.panel_25, wx.ID_ANY, "1000")
@@ -2059,22 +1815,6 @@ class TraceBoundary(wx.Frame, Module):
         self.Bind(wx.EVT_TEXT, self.on_text_trace_speed, self.text_trace_speed)
         self.Bind(wx.EVT_BUTTON, self.on_button_trace, self.button_trace)
         # end wxGlade
-        self.Show()
-        self.Bind(wx.EVT_CLOSE, self.on_close, self)
-
-    def on_close(self, event):
-        if self.state == 5:
-            event.Veto()
-        else:
-            self.state = 5
-            self.context.close(self.name)
-            event.Skip()  # Call destroy as regular.
-
-    def finalize(self, *args, **kwargs):
-        try:
-            self.Close()
-        except RuntimeError:
-            pass
 
     def __set_properties(self):
         # begin wxGlade: TraceBoundary.__set_properties
@@ -2228,6 +1968,81 @@ class SilenceApp(wx.App, Module):
         kernel.register("window/EgvSave", EgvSave)
         kernel.register("window/TraceBoundary", TraceBoundary)
         # kernel.register("module/Scene", Scene)
+        kernel.register("window/RasterWizard", RasterWizard)
+
+        context = kernel.get_context('/')
+
+        @kernel.console_option('path', 'p', type=context.get_context, default=context.active,
+                               help="Context Path at which to open the window")
+        @kernel.console_argument('subcommand', type=str, help="open <window>")
+        @kernel.console_argument('window', type=str, help="window to apply subcommand to")
+        @kernel.console_command("window", help="Silence window information")
+        def window(channel, _, subcommand=None, window=None, path=None, args=(), **kwargs):
+            """
+            Opens a MeerK40t window or provides information. This command is restricted to use with the wxMeerK40t gui.
+            This also allows use of a -p flag that sets the context path for this window to operate at. This should
+            often be restricted to where the windows are typically opened since their function and settings usually
+            depend on the context used. The default root path is "/". Eg. "window open -p / Settings"
+            """
+            context = kernel.get_context('/')
+            if path is None:
+                path = context.active
+            if subcommand is None:
+                channel(_("----------"))
+                channel(_("Loaded Windows in Context %s:") % str(context._path))
+                for i, name in enumerate(context.opened):
+                    if not name.startswith("window"):
+                        continue
+                    module = context.opened[name]
+                    channel(_("%d: %s as type of %s") % (i + 1, name, type(module)))
+
+                channel(_("----------"))
+                channel(_("Loaded Windows in Device %s:") % str(path._path))
+                for i, name in enumerate(path.opened):
+                    if not name.startswith("window"):
+                        continue
+                    module = path.opened[name]
+                    channel(_("%d: %s as type of %s") % (i + 1, name, type(module)))
+                channel(_("----------"))
+                return
+            if window is None or subcommand == 'list':
+                channel(_("----------"))
+                channel(_("Windows Registered:"))
+                for i, name in enumerate(context.match("window")):
+                    channel("%d: %s" % (i + 1, name))
+                return
+            elif subcommand == "open":
+                try:
+                    parent = context.gui
+                except AttributeError:
+                    parent = None
+                try:
+                    path.open("window/%s" % window, parent, *args)
+                    channel(_("Window Opened."))
+                except (KeyError, ValueError):
+                    channel(_("No such window as %s" % window))
+                except IndexError:
+                    raise SyntaxError
+            elif subcommand == "close":
+                try:
+                    parent = context.gui
+                except AttributeError:
+                    parent = None
+                try:
+                    path.close("window/%s" % window, parent, *args)
+                    channel(_("Window closed."))
+                except (KeyError, ValueError):
+                    channel(_("No such window as %s" % window))
+                except IndexError:
+                    raise SyntaxError
+            elif subcommand == "reset":
+                if kernel._config is not None:
+                    for context in list(kernel.contexts):
+                        if context.startswith('window'):
+                            del kernel.contexts[context]
+                    kernel._config.DeleteGroup('window')
+            else:
+                raise SyntaxError
 
     def run_later(self, command, *args):
         if wx.IsMainThread():

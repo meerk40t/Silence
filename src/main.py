@@ -54,7 +54,6 @@ parser.add_argument("-P", "--profile", type=int, default=None, help="Specify a s
 
 def run():
     argv = sys.argv[1:]
-    # argv = "-P 0".split()
     args = parser.parse_args(argv)
 
     if args.version:
@@ -67,76 +66,38 @@ def run():
         path = ''
     kernel = Kernel("Silence", SILENCE_VERSION, "Silence", path)
 
-    """
-    These are frozen bootstraps. They are not dynamically found by entry points they are the configured accepted
-    hardcoded addons and plugins permitted by MeerK40t in a compiled bundle.
-    """
-    try:
-        from . import kernelserver
+    from .device import basedevice
 
-        kernel.add_plugin(kernelserver.plugin)
-    except ImportError:
-        pass
+    kernel.add_plugin(basedevice.plugin)
 
-    try:
-        from .kernel_root import basedevice
+    from .core import elements
 
-        kernel.add_plugin(basedevice.plugin)
-    except ImportError:
-        pass
+    kernel.add_plugin(elements.plugin)
 
-    try:
-        from .core import elements
+    from .core import cutplanner
 
-        kernel.add_plugin(elements.plugin)
-    except ImportError:
-        pass
+    kernel.add_plugin(cutplanner.plugin)
 
-    try:
-        from .core import cutplanner
+    from .device.lhystudios import lhystudiosdevice
 
-        kernel.add_plugin(cutplanner.plugin)
-    except ImportError:
-        pass
+    kernel.add_plugin(lhystudiosdevice.plugin)
 
-    try:
-        from .kernel_root.lhystudios import lhystudiosdevice
+    from .device.moshi import moshidevice
 
-        kernel.add_plugin(lhystudiosdevice.plugin)
-    except ImportError:
-        pass
+    kernel.add_plugin(moshidevice.plugin)
 
-    try:
-        from .kernel_root.moshi import moshidevice
+    from .core import svg_io
 
-        kernel.add_plugin(moshidevice.plugin)
-    except ImportError:
-        pass
+    kernel.add_plugin(svg_io.plugin)
 
-    try:
-        from .core import svg_io
+    from .dxf import dxf_io
 
-        kernel.add_plugin(svg_io.plugin)
-    except ImportError:
-        pass
-
-    try:
-        from .dxf import dxf_io
-
-        kernel.add_plugin(dxf_io.plugin)
-    except ImportError:
-        # This module cannot be loaded. ezdxf missing.
-        pass
+    kernel.add_plugin(dxf_io.plugin)
 
     if not args.no_gui:
-        # Must permit this plugin in the gui.
-        try:
-            from .gui import silence
+        from .gui import silence
 
-            kernel.add_plugin(silence.plugin)
-        except ImportError:
-            # This module cannot be loaded. wxPython missing.
-            pass
+        kernel.add_plugin(silence.plugin)
 
     if not getattr(sys, "frozen", False):
         """
@@ -164,8 +125,6 @@ def run():
         import os
 
         kernel_root.load(os.path.realpath(args.input.name))
-        elements = kernel_root.elements
-        elements.classify(list(elements.elems()))
 
     if args.set is not None:
         # Set the variables requested here.
