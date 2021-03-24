@@ -1,12 +1,8 @@
-
-from .moshiinterpreter import MoshiInterpreter
-from .moshicontroller import MoshiController
-from ..lasercommandconstants import *
-from ...kernel import (
-    Modifier,
-    STATE_UNKNOWN,
-)
+from ...kernel import STATE_UNKNOWN, Modifier
 from ...svgelements import Length
+from ..lasercommandconstants import *
+from .moshicontroller import MoshiController
+from .moshiinterpreter import MoshiInterpreter
 
 
 def plugin(kernel, lifecycle=None):
@@ -27,7 +23,6 @@ The device is primary composed of three main modules.
 
 
 class MoshiDevice(Modifier):
-
     def __init__(self, context, name=None, channel=None, *args, **kwargs):
         Modifier.__init__(self, context, name, channel)
         context.device_name = "Moshi"
@@ -35,6 +30,9 @@ class MoshiDevice(Modifier):
         self.state = STATE_UNKNOWN
         self.dx = 0
         self.dy = 0
+        self.bed_dim = context.get_context('/')
+        self.bed_dim.setting(int, "bed_width", 310)
+        self.bed_dim.setting(int, "bed_height", 210)
 
     def __repr__(self):
         return "MoshiDevice()"
@@ -46,10 +44,10 @@ class MoshiDevice(Modifier):
 
     def execute_absolute_position(self, position_x, position_y):
         x_pos = Length(position_x).value(
-            ppi=1000.0, relative_length=self.context.bed_width * 39.3701
+            ppi=1000.0, relative_length=self.bed_dim.bed_width * 39.3701
         )
         y_pos = Length(position_y).value(
-            ppi=1000.0, relative_length=self.context.bed_height * 39.3701
+            ppi=1000.0, relative_length=self.bed_dim.bed_height * 39.3701
         )
 
         def move():
@@ -61,10 +59,10 @@ class MoshiDevice(Modifier):
 
     def execute_relative_position(self, position_x, position_y):
         x_pos = Length(position_x).value(
-            ppi=1000.0, relative_length=self.context.bed_width * 39.3701
+            ppi=1000.0, relative_length=self.bed_dim.bed_width * 39.3701
         )
         y_pos = Length(position_y).value(
-            ppi=1000.0, relative_length=self.context.bed_height * 39.3701
+            ppi=1000.0, relative_length=self.bed_dim.bed_height * 39.3701
         )
 
         def move():
@@ -77,12 +75,13 @@ class MoshiDevice(Modifier):
 
     def attach(self, *a, **kwargs):
         context = self.context
+        root_context = context.get_context('/')
         kernel = context._kernel
 
-        @context.console_argument("amount", type=Length, help="amount to move in the set direction.")
-        @context.console_command(
-            ("left", "right", "up", "down"), help="cmd <amount>"
+        @context.console_argument(
+            "amount", type=Length, help="amount to move in the set direction."
         )
+        @context.console_command(("left", "right", "up", "down"), help="cmd <amount>")
         def direction(command, channel, _, amount=None, args=tuple(), **kwargs):
             active = kernel.active_device
             spooler = active.spooler
@@ -92,24 +91,16 @@ class MoshiDevice(Modifier):
                 return
             if amount is None:
                 amount = Length("1mm")
-            max_bed_height = active.bed_height * 39.3701
-            max_bed_width = active.bed_width * 39.3701
+            max_bed_height = self.bed_dim.bed_height * 39.3701
+            max_bed_width = self.bed_dim.bed_width * 39.3701
             if command.endswith("right"):
-                self.dx += amount.value(
-                    ppi=1000.0, relative_length=max_bed_width
-                )
+                self.dx += amount.value(ppi=1000.0, relative_length=max_bed_width)
             elif command.endswith("left"):
-                self.dx -= amount.value(
-                    ppi=1000.0, relative_length=max_bed_width
-                )
+                self.dx -= amount.value(ppi=1000.0, relative_length=max_bed_width)
             elif command.endswith("up"):
-                self.dy -= amount.value(
-                    ppi=1000.0, relative_length=max_bed_height
-                )
+                self.dy -= amount.value(ppi=1000.0, relative_length=max_bed_height)
             elif command.endswith("down"):
-                self.dy += amount.value(
-                    ppi=1000.0, relative_length=max_bed_height
-                )
+                self.dy += amount.value(ppi=1000.0, relative_length=max_bed_height)
             kernel._console_queue("jog")
 
         @context.console_command(
@@ -179,11 +170,13 @@ class MoshiDevice(Modifier):
         context.setting(int, "packet_count", 0)
         context.setting(int, "rejected_count", 0)
         context.setting(bool, "autolock", True)
-
         context.setting(str, "board", "M2")
-        context.setting(int, "bed_width", 310)
-        context.setting(int, "bed_height", 210)
+
         context.setting(bool, "fix_speeds", False)
+        bed_dim = context.get_context('/')
+        bed_dim.setting(int, "bed_width", 310)
+        bed_dim.setting(int, "bed_height", 210)
+
         self.dx = 0
         self.dy = 0
 
@@ -192,9 +185,7 @@ class MoshiDevice(Modifier):
         context.activate("modifier/Spooler")
 
         context.listen("interpreter;mode", self.on_mode_change)
-        context.signal(
-            "bed_size", (context.bed_width, context.bed_height)
-        )
+        context.signal("bed_size", (self.bed_dim.bed_width, self.bed_dim.bed_height))
 
     def detach(self, *args, **kwargs):
         self.context.unlisten("interpreter;mode", self.on_mode_change)

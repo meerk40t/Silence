@@ -6,23 +6,22 @@ try:
     from collections.abc import MutableSequence  # noqa
 except ImportError:
     from collections import MutableSequence  # noqa
-from copy import copy
 
+from copy import copy
 from math import (
+    acos,
+    atan,
+    atan2,
     ceil,
     cos,
+    degrees,
+    hypot,
+    log,
     radians,
     sin,
     sqrt,
-    hypot,
-    atan,
-    atan2,
     tan,
-    degrees,
-    acos,
-    log,
 )
-
 from xml.etree.ElementTree import iterparse
 
 try:
@@ -44,7 +43,7 @@ Though not required the SVGImage class acquires new functionality if provided wi
 and the Arc can do exact arc calculations if scipy is installed.
 """
 
-SVGELEMENTS_VERSION = "1.4.7"
+SVGELEMENTS_VERSION = "1.4.10"
 
 MIN_DEPTH = 5
 ERROR = 1e-12
@@ -1081,7 +1080,11 @@ class Color(object):
             second = Color(second)
         if isinstance(second, Color):
             second = second.value
-        return first == second
+        if first is None:
+            return second is None
+        if second is None:
+            return first is None
+        return first & 0xFFFFFFFF == second & 0xFFFFFFFF
 
     def __ne__(self, other):
         return not self == other
@@ -1102,13 +1105,7 @@ class Color(object):
         g = Color.crimp(g)
         b = Color.crimp(b)
         a = Color.crimp(opacity * 255.0)
-        if a & 0x80 != 0:
-            a ^= 0x80
-            a <<= 24
-            a = ~a
-            a ^= 0x7FFFFFFF
-        else:
-            a <<= 24
+        a <<= 24
         r <<= 16
         g <<= 8
         c = r | g | b | a
@@ -1445,7 +1442,10 @@ class Color(object):
             return Color.rgb_to_int(255, 255, 0)
         if v == "yellowgreen":
             return Color.rgb_to_int(154, 205, 50)
-        return Color.rgb_to_int(0, 0, 0)
+        try:
+            return int(v)
+        except ValueError:
+            return Color.rgb_to_int(0, 0, 0)
 
     @staticmethod
     def parse_color_hex(hex_string):
@@ -4966,7 +4966,7 @@ class Arc(Curve):
         self.pry.matrix_transform(rotate_matrix)
         self.sweep = Angle.degrees(delta).as_radians
 
-    def as_quad_curves(self, arc_required):
+    def as_quad_curves(self, arc_required=None):
         if arc_required is None:
             sweep_limit = tau / 12.0
             arc_required = int(ceil(abs(self.sweep) / sweep_limit))
@@ -5180,6 +5180,8 @@ class Arc(Curve):
         """Find the bounding box of a arc.
         Code from: https://github.com/mathandy/svgpathtools
         """
+        if self.sweep == 0:
+            return self.start.x, self.start.y, self.end.x, self.end.y
         phi = self.get_rotation().as_radians
         if cos(phi) == 0:
             atan_x = tau / 4.0
@@ -6196,10 +6198,10 @@ class Rect(Shape):
 
         Skewed and Rotated rectangles cannot be reified.
         """
-        GraphicObject.reify(self)
-        Transformable.reify(self)
         scale_x = self.transform.value_scale_x()
         scale_y = self.transform.value_scale_y()
+        if scale_x * scale_y < 0:
+            return self # No reification of negative values, gives negative dims.
         translate_x = self.transform.value_trans_x()
         translate_y = self.transform.value_trans_y()
         if (
@@ -6208,6 +6210,8 @@ class Rect(Shape):
             and scale_x != 0
             and scale_y != 0
         ):
+            GraphicObject.reify(self)
+            Transformable.reify(self)
             self.x *= scale_x
             self.y *= scale_y
             self.x += translate_x
@@ -6396,10 +6400,10 @@ class _RoundShape(Shape):
 
         Skewed and Rotated roundshapes cannot be reified.
         """
-        GraphicObject.reify(self)
-        Transformable.reify(self)
-        scale_x = abs(self.transform.value_scale_x())
-        scale_y = abs(self.transform.value_scale_y())
+        scale_x = self.transform.value_scale_x()
+        scale_y = self.transform.value_scale_y()
+        if scale_y * scale_x < 0:
+            return self  # No reification of flipped values.
         translate_x = self.transform.value_trans_x()
         translate_y = self.transform.value_trans_y()
         if (
@@ -6408,6 +6412,8 @@ class _RoundShape(Shape):
             and scale_x != 0
             and scale_y != 0
         ):
+            GraphicObject.reify(self)
+            Transformable.reify(self)
             self.cx *= scale_x
             self.cy *= scale_y
             self.cx += translate_x
@@ -7179,21 +7185,11 @@ class Group(SVGElement, Transformable, list):
     def reify(self):
         Transformable.reify(self)
 
-    def bbox(self, transformed=True):
-        """
-        Returns the bounding box of the given object.
-
-        In the case of groups this is the union of all the bounding boxes of all bound children.
-
-        Setting transformed to false, may yield unexpected results if subitems are transformed in non-uniform
-        ways.
-
-        :param transformed: bounding box of the properly transformed children.
-        :return:
-        """
+    @staticmethod
+    def union_bbox(elements, transformed=True):
         boundary_points = []
-        for e in self.select():
-            if not hasattr(e, 'bbox'):
+        for e in elements:
+            if not hasattr(e, "bbox"):
                 continue
             box = e.bbox(False)
             if box is None:
@@ -7218,6 +7214,20 @@ class Group(SVGElement, Transformable, list):
         xmax = max([e[0] for e in boundary_points])
         ymax = max([e[1] for e in boundary_points])
         return xmin, ymin, xmax, ymax
+
+    def bbox(self, transformed=True):
+        """
+        Returns the bounding box of the given object.
+
+        In the case of groups this is the union of all the bounding boxes of all bound children.
+
+        Setting transformed to false, may yield unexpected results if subitems are transformed in non-uniform
+        ways.
+
+        :param transformed: bounding box of the properly transformed children.
+        :return:
+        """
+        return Group.union_bbox(self.select(), transformed)
 
 
 class ClipPath(SVGElement, list):
@@ -7543,18 +7553,21 @@ class SVGImage(SVGElement, GraphicObject, Transformable):
         )  # Dataurl requires this be processed first.
 
         if self.url is not None:
-            if self.url.startswith("data:image/"):
-                # Data URL
-                from base64 import b64decode
+            try:
+                if self.url.startswith("data:image/"):
+                    # Data URL
+                    from base64 import b64decode
 
-                if self.url.startswith("data:image/png;base64,"):
-                    self.data = b64decode(self.url[22:])
-                elif self.url.startswith("data:image/jpg;base64,"):
-                    self.data = b64decode(self.url[22:])
-                elif self.url.startswith("data:image/jpeg;base64,"):
-                    self.data = b64decode(self.url[23:])
-                elif self.url.startswith("data:image/svg+xml;base64,"):
-                    self.data = b64decode(self.url[26:])
+                    if self.url.startswith("data:image/png;base64,"):
+                        self.data = b64decode(self.url[22:])
+                    elif self.url.startswith("data:image/jpg;base64,"):
+                        self.data = b64decode(self.url[22:])
+                    elif self.url.startswith("data:image/jpeg;base64,"):
+                        self.data = b64decode(self.url[23:])
+                    elif self.url.startswith("data:image/svg+xml;base64,"):
+                        self.data = b64decode(self.url[26:])
+            except AttributeError:
+                pass
 
     def property_by_object(self, s):
         SVGElement.property_by_object(self, s)

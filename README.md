@@ -30,7 +30,7 @@ This project relies on the MeerK40t Kernel and contains many of the advanced fea
 
 This might need to include some console commands to give some access to fancier MeerK40t features, like setting dot_length and PPI values for some particular type of operation.
 
-# Expected Features
+# Expected Features. 
 * Drag-and-Drop of files
 * Direct read of image files
 * Reading of GCode

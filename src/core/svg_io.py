@@ -3,59 +3,16 @@ from base64 import b64encode
 from io import BytesIO
 from xml.etree.cElementTree import Element, ElementTree, SubElement
 
-from .elements import LaserOperation
 from ..svgelements import (
-    SVG_NAME_TAG,
-    SVG_ATTR_VERSION,
-    SVG_VALUE_VERSION,
-    SVG_ATTR_XMLNS,
-    SVG_VALUE_XMLNS,
-    SVG_ATTR_XMLNS_LINK,
-    SVG_VALUE_XLINK,
-    SVG_ATTR_XMLNS_EV,
-    SVG_VALUE_XMLNS_EV,
-    SVG_ATTR_WIDTH,
-    SVG_ATTR_HEIGHT,
-    SVG_ATTR_VIEWBOX,
-    SVG_TAG_TEXT,
-    Path,
-    SVG_TAG_PATH,
-    SVG_ATTR_DATA,
-    SVG_ATTR_TRANSFORM,
-    SVG_ATTR_STROKE_WIDTH,
-    Shape,
-    Rect,
-    SVG_TAG_RECT,
-    Circle,
-    SVG_TAG_CIRCLE,
-    Ellipse,
-    SVG_TAG_ELLIPSE,
-    Polygon,
-    SVG_TAG_POLYGON,
-    Polyline,
-    SVG_TAG_POLYLINE,
-    Matrix,
-    SVG_ATTR_RADIUS_X,
-    SVG_ATTR_RADIUS_Y,
-    SVG_ATTR_POINTS,
-    SVG_ATTR_RADIUS,
-    SVG_ATTR_X,
-    SVG_ATTR_Y,
-    SVGText,
-    SVGImage,
-    SVG_TAG_IMAGE,
-    SVG_VALUE_NONE,
-    SVG_ATTR_STROKE,
-    SVG_ATTR_FILL,
-    SVG,
-    Group,
-    SVGElement,
-    SVG_ATTR_TAG,
-    Color,
-    SVG_ATTR_ID,
-    SVG_ATTR_FILL_OPACITY,
-    SVG_ATTR_STROKE_OPACITY,
-)
+    SVG, SVG_ATTR_DATA, SVG_ATTR_FILL, SVG_ATTR_FILL_OPACITY, SVG_ATTR_HEIGHT,
+    SVG_ATTR_ID, SVG_ATTR_STROKE, SVG_ATTR_STROKE_OPACITY,
+    SVG_ATTR_STROKE_WIDTH, SVG_ATTR_TAG, SVG_ATTR_TRANSFORM, SVG_ATTR_VERSION,
+    SVG_ATTR_VIEWBOX, SVG_ATTR_WIDTH, SVG_ATTR_X, SVG_ATTR_XMLNS,
+    SVG_ATTR_XMLNS_EV, SVG_ATTR_XMLNS_LINK, SVG_ATTR_Y, SVG_NAME_TAG,
+    SVG_TAG_IMAGE, SVG_TAG_PATH, SVG_TAG_TEXT, SVG_VALUE_NONE,
+    SVG_VALUE_VERSION, SVG_VALUE_XLINK, SVG_VALUE_XMLNS, SVG_VALUE_XMLNS_EV,
+    Color, Group, Matrix, Path, Shape, SVGElement, SVGImage, SVGText)
+from .elements import LaserOperation
 
 MILS_PER_MM = 39.3701
 
@@ -89,10 +46,11 @@ class SVGWriter:
         mils_per_mm = 39.3701
         mils_per_px = 1000.0 / 96.0
         px_per_mils = 96.0 / 1000.0
-        context.setting(int, "bed_width", 310)
-        context.setting(int, "bed_height", 210)
-        mm_width = context.bed_width
-        mm_height = context.bed_height
+        bed_dim = context.get_context('/')
+        bed_dim.setting(int, "bed_width", 310)
+        bed_dim.setting(int, "bed_height", 210)
+        mm_width = bed_dim.bed_width
+        mm_height = bed_dim.bed_height
         root.set(SVG_ATTR_WIDTH, "%fmm" % mm_width)
         root.set(SVG_ATTR_HEIGHT, "%fmm" % mm_height)
         px_width = mm_width * mils_per_mm * px_per_mils
@@ -104,21 +62,36 @@ class SVGWriter:
         elements = context.elements
         for operation in elements.ops():
             subelement = SubElement(root, "operation")
-            c = getattr(operation, "color")
-            if c is not None:
+
+            if hasattr(operation, "color"):
+                c = getattr(operation, "color")
+                if c is not None:
+                    if isinstance(c, int):
+                        c = Color(c)
                 subelement.set("color", str(c))
             for key in dir(operation):
-                if key.startswith("_"):
+                if key.startswith("_") or key.startswith("implicit"):
                     continue
                 value = getattr(operation, key)
                 if type(value) not in (int, float, str, bool):
                     continue
                 subelement.set(key, str(value))
+            if hasattr(operation, "settings"):
+                for key in dir(operation.settings):
+                    if key.startswith("_") or key.startswith("implicit"):
+                        continue
+                    value = getattr(operation.settings, key)
+                    if type(value) not in (int, float, str, bool):
+                        continue
+                    subelement.set(key, str(value))
 
         if elements.note is not None:
             subelement = SubElement(root, "note")
             subelement.set(SVG_TAG_TEXT, elements.note)
         for element in elements.elems():
+
+            if isinstance(element, Shape) and not isinstance(element, Path):
+                element = Path(element)
 
             if isinstance(element, Path):
                 element = abs(element)
@@ -156,11 +129,15 @@ class SVGWriter:
                         "raster_step",
                         "d_ratio",
                         "font-family",
+                        "font_face",
                         "font-size",
                         "font-weight",
+                        "anchor",
+                        "x",
+                        "y",
                     ):
                         subelement.set(key, str(val))
-            else:  # Image.
+            elif isinstance(element, SVGImage):
                 subelement = SubElement(root, SVG_TAG_IMAGE)
                 stream = BytesIO()
                 element.image.save(stream, format="PNG")
@@ -177,17 +154,20 @@ class SVGWriter:
                     "transform",
                     "matrix(%f, %f, %f, %f, %f, %f)" % (t.a, t.b, t.c, t.d, t.e, t.f),
                 )
-                for key, val in element.values.items():
-                    if key in (
-                        "speed",
-                        "overscan",
-                        "power",
-                        "passes",
-                        "raster_direction",
-                        "raster_step",
-                        "d_ratio",
-                    ):
-                        subelement.set(key, str(val))
+                if element.values is not None:
+                    for key, val in element.values.items():
+                        if key in (
+                            "speed",
+                            "overscan",
+                            "power",
+                            "passes",
+                            "raster_direction",
+                            "raster_step",
+                            "d_ratio",
+                        ):
+                            subelement.set(key, str(val))
+            else:
+                raise ValueError("Attempting to save unknown element.")
             stroke = element.stroke
             if stroke is not None:
                 stroke_opacity = stroke.opacity
@@ -208,6 +188,7 @@ class SVGWriter:
                     subelement.set(SVG_ATTR_STROKE_WIDTH, stroke_width)
                 except AttributeError:
                     pass
+
             fill = element.fill
             if fill is not None:
                 fill_opacity = fill.opacity
@@ -219,8 +200,11 @@ class SVGWriter:
                 subelement.set(SVG_ATTR_FILL, fill)
                 if fill_opacity != 1.0 and fill_opacity is not None:
                     subelement.set(SVG_ATTR_FILL_OPACITY, str(fill_opacity))
-                if element.id is not None:
-                    subelement.set(SVG_ATTR_ID, str(element.id))
+            else:
+                subelement.set(SVG_ATTR_FILL, SVG_VALUE_NONE)
+
+            if element.id is not None:
+                subelement.set(SVG_ATTR_ID, str(element.id))
         SVGWriter._pretty_print(root)
         tree = ElementTree(root)
         tree.write(f)
@@ -245,8 +229,9 @@ class SVGLoader:
 
     @staticmethod
     def load(context, elements_modifier, pathname, **kwargs):
-        context.setting(int, "bed_width", 310)
-        context.setting(int, "bed_height", 210)
+        bed_dim = context.get_context('/')
+        bed_dim.setting(int, "bed_width", 310)
+        bed_dim.setting(int, "bed_height", 210)
         if "svg_ppi" in kwargs:
             ppi = float(kwargs["svg_ppi"])
         else:
@@ -257,12 +242,23 @@ class SVGLoader:
         svg = SVG.parse(
             source=pathname,
             reify=False,
-            width="%fmm" % (context.bed_width),
-            height="%fmm" % (context.bed_height),
+            width="%fmm" % (bed_dim.bed_width),
+            height="%fmm" % (bed_dim.bed_height),
             ppi=ppi,
             color="none",
             transform="scale(%f)" % scale_factor,
         )
+        context_node = elements_modifier.get(type="branch elems")
+        basename = os.path.basename(pathname)
+        file_node = context_node.add(type="file", name=basename)
+        file_node.filepath = pathname
+        return SVGLoader.parse(
+            svg, elements_modifier, file_node, pathname, scale_factor
+        )
+
+    @staticmethod
+    def parse(svg, elements_modifier, context_node, pathname, scale_factor):
+        operations_cleared = False
         for element in svg:
             try:
                 if element.values["visibility"] == "hidden":
@@ -272,31 +268,45 @@ class SVGLoader:
             except AttributeError:
                 pass
             if isinstance(element, SVGText):
-                elements_modifier.add_elem(element)
-                elements_modifier.classify(element)
+                if element.text is None:
+                    continue
+                context_node.add(element, type="elem")
+                elements_modifier.classify([element])
             elif isinstance(element, Path):
-                if len(element) != 0:
-                    element.approximate_arcs_with_cubics()
-                    elements_modifier.add_elem(element)
-                    elements_modifier.classify(element)
+                if len(element) == 0:
+                    continue
+                element.approximate_arcs_with_cubics()
+                context_node.add(element, type="elem")
+                elements_modifier.classify([element])
             elif isinstance(element, Shape):
-                e = Path(element)
-                e.reify()  # In some cases the shape could not have reified, the path must.
-                if len(e) != 0:
-                    e.approximate_arcs_with_cubics()
-                    elements_modifier.add_elem(e)
-                    elements_modifier.classify(element)
+                if not element.transform.is_identity():
+                    # Shape Reification failed.
+                    element = Path(element)
+                    element.reify()
+                    element.approximate_arcs_with_cubics()
+                    if len(element) == 0:
+                        continue  # Degenerate.
+                else:
+                    e = Path(element)
+                    if len(e) == 0:
+                        continue  # Degenerate.
+                context_node.add(element, type="elem")
+                elements_modifier.classify([element])
             elif isinstance(element, SVGImage):
                 try:
                     element.load(os.path.dirname(pathname))
                     if element.image is not None:
-                        elements_modifier.add_elem(element)
-                        elements_modifier.classify(element)
+                        context_node.add(element, type="elem")
+                        elements_modifier.classify([element])
                 except OSError:
                     pass
             elif isinstance(element, SVG):
                 continue
             elif isinstance(element, Group):
+                new_context = context_node.add(type="group", name=element.id)
+                SVGLoader.parse(
+                    element, elements_modifier, new_context, pathname, scale_factor
+                )
                 continue
             elif isinstance(element, SVGElement):
                 try:
@@ -309,9 +319,12 @@ class SVGLoader:
                     pass
                 try:
                     if str(element.values[SVG_ATTR_TAG]).lower() == "operation":
+                        if not operations_cleared:
+                            elements_modifier.clear_operations()
+                            operations_cleared = True
                         op = LaserOperation()
                         for key in dir(op):
-                            if key.startswith("_"):
+                            if key.startswith("_") or key.startswith("implicit"):
                                 continue
                             v = getattr(op, key)
                             if key in element.values:
@@ -329,7 +342,7 @@ class SVGLoader:
                                         in ("true", "1"),
                                     )
                         for key in dir(op.settings):
-                            if key.startswith("_"):
+                            if key.startswith("_") or key.startswith("implicit"):
                                 continue
                             v = getattr(op.settings, key)
                             if key in element.values:

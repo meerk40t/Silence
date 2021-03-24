@@ -181,7 +181,6 @@ def run():
     kernel.boot()
     kernel_root.channel("console").watch(print)
 
-
     if args.input is not None:
         import os
 

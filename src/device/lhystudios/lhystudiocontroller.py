@@ -1,18 +1,9 @@
 import threading
 import time
 
-from ...kernel import (
-    STATE_UNKNOWN,
-    Module,
-    STATE_ACTIVE,
-    STATE_PAUSE,
-    STATE_INITIALIZE,
-    STATE_BUSY,
-    STATE_IDLE,
-    STATE_TERMINATE,
-    STATE_END,
-    STATE_WAIT,
-)
+from ...kernel import (STATE_ACTIVE, STATE_BUSY, STATE_END, STATE_IDLE,
+                       STATE_INITIALIZE, STATE_PAUSE, STATE_TERMINATE,
+                       STATE_UNKNOWN, STATE_WAIT, Module)
 
 
 def convert_to_list_bytes(data):
@@ -131,12 +122,16 @@ class LhystudioController(Module):
         self.is_shutdown = False
 
         self._thread = None
-        self._buffer = bytearray()  # Threadsafe buffered commands to be sent to controller.
+        self._buffer = (
+            bytearray()
+        )  # Threadsafe buffered commands to be sent to controller.
         self._realtime_buffer = (
-             bytearray()  # Threadsafe realtime buffered commands to be sent to the controller.
+            bytearray()  # Threadsafe realtime buffered commands to be sent to the controller.
         )
         self._queue = bytearray()  # Thread-unsafe additional commands to append.
-        self._preempt = bytearray()  # Thread-unsafe preempt commands to prepend to the buffer.
+        self._preempt = (
+            bytearray()
+        )  # Thread-unsafe preempt commands to prepend to the buffer.
         self.context._buffer_size = 0
         self._queue_lock = threading.Lock()
         self._preempt_lock = threading.Lock()
@@ -226,8 +221,10 @@ class LhystudioController(Module):
                     f.write("Document type : LHYMICRO-GL file\n")
                     f.write("File version: 1.0.01\n")
                     f.write("Copyright: Unknown\n")
-                    f.write("Creator-Software: %s v%s\n" % (self.context._kernel.name,
-                                                            self.context._kernel.version))
+                    f.write(
+                        "Creator-Software: %s v%s\n"
+                        % (self.context._kernel.name, self.context._kernel.version)
+                    )
                     f.write("\n")
                     f.write("%0%0%0%0%\n")
                     buffer = bytes(self._buffer)
@@ -276,11 +273,6 @@ class LhystudioController(Module):
             self.update_state(STATE_ACTIVE)
             self.start()
             channel("Lhystudios Channel Resumed.")
-
-        @self.context.console_command("abort", help="Abort Job")
-        def pipe_abort(command, channel, _, args=tuple(), **kwargs):
-            self.reset()
-            channel("Lhystudios Channel Aborted.")
 
         context.setting(int, "packet_count", 0)
         context.setting(int, "rejected_count", 0)
@@ -388,6 +380,7 @@ class LhystudioController(Module):
             self._thread = self.context.threaded(
                 self._thread_data_send, thread_name="LhyPipe(%s)" % (self.context._path)
             )
+            self._thread.stop = self.stop
             self.update_state(STATE_INITIALIZE)
 
     def _pause_busy(self):
@@ -781,7 +774,9 @@ class LhystudioController(Module):
         else:
             self._status = self.driver.get_status()
         if self.context is not None:
-            self.context.signal("pipe;status", self._status, get_code_string_from_code(self._status[1]))
+            self.context.signal(
+                "pipe;status", self._status, get_code_string_from_code(self._status[1])
+            )
             self.recv_channel(str(self._status))
 
     def wait_until_accepting_packets(self):

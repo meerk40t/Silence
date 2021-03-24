@@ -1,42 +1,47 @@
-from ..kernel import Modifier
-from ..device.lasercommandconstants import (
-    COMMAND_WAIT_FINISH,
-    COMMAND_MODE_RAPID,
-    COMMAND_MOVE,
-)
-from ..svgelements import (
-    Path,
-    Length,
-    Circle,
-    Ellipse,
-    Color,
-    Rect,
-    SVGText,
-    Polygon,
-    Polyline,
-    Matrix,
-    Angle,
-    SVGImage,
-    SVGElement,
-    Point,
-    Shape,
-    Move,
-    Close,
-    Line,
-    QuadraticBezier,
-    CubicBezier,
-    Arc, SimpleLine,
-)
-
+import functools
 from copy import copy
 
+from ..device.lasercommandconstants import (
+    COMMAND_BEEP,
+    COMMAND_FUNCTION,
+    COMMAND_HOME,
+    COMMAND_MODE_RAPID,
+    COMMAND_MOVE,
+    COMMAND_WAIT_FINISH,
+)
+from ..kernel import Modifier
+from ..svgelements import (
+    Angle,
+    Arc,
+    Circle,
+    Close,
+    Color,
+    CubicBezier,
+    Ellipse,
+    Group,
+    Length,
+    Line,
+    Matrix,
+    Move,
+    Path,
+    Point,
+    Polygon,
+    Polyline,
+    QuadraticBezier,
+    Rect,
+    Shape,
+    SimpleLine,
+    SVGElement,
+    SVGImage,
+    SVGText,
+)
 from .cutcode import (
-    LaserSettings,
+    ArcCut,
+    CubicCut,
     CutCode,
+    LaserSettings,
     LineCut,
     QuadCut,
-    CubicCut,
-    ArcCut,
     RasterCut,
 )
 
@@ -47,35 +52,52 @@ def plugin(kernel, lifecycle=None):
     elif lifecycle == "boot":
         kernel_root = kernel.get_context("/")
         kernel_root.activate("modifier/Elemental")
+    elif lifecycle == "ready":
+        context = kernel.get_context("/")
+        context.signal("rebuild_tree")
+        context.signal("refresh_tree")
 
 
-NODE_ROOT = 0
-NODE_OPERATION_BRANCH = 10
-NODE_OPERATION = 11
-NODE_OPERATION_ELEMENT = 12
-NODE_ELEMENTS_BRANCH = 20
-NODE_ELEMENT = 21
-NODE_FILES_BRANCH = 30
-NODE_FILE_FILE = 31
-NODE_FILE_ELEMENT = 32
-NODE_TEMPLATE_BRANCH = 40
-NODE_TEMPLATE_OPERATION = 41
+"""
+The elements modifier stores all the element types in a bootstrapped tree. Specific node types added to the tree become
+particular class types and the interactions between these types and functions applied are registered in the kernel.
+
+Types:
+root: Root Tree element
+branch ops: Operation Branch
+branch elems: Elements Branch
+opnode: Element below op branch which stores specific data.
+op: LayerOperation within Operation Branch.
+opcmd: CommandOperation within Operation Branch.
+elem: Element with Element Branch or subgroup.
+file: File Group within Elements Branch
+group: Group type within Branch Elems or opnode.
+cutcode: CutCode type within Operation Branch and Element Branch.
+
+rasternode: theoretical: would store all the opnodes to be rastered. Such that we could store rasters in images.
+
+Tree Functions are to be stored: tree/command/type. These store many functions like the commands.
+"""
 
 
 class Node:
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    """
+    Nodes are elements within the tree which stores most of the objects in Elements.
+    """
+
+    def __init__(self, data_object=None, type=None, *args, **kwargs):
+        super().__init__()
         self._children = list()
         self._root = None
         self._parent = None
 
-        self.object = None
-        self.type = None
-        self.single = False
+        self.object = data_object
+        self.type = type
 
-        self._selected = False
         self._emphasized = False
         self._highlighted = False
+        self._target = False
+
         self._opened = False
 
         self._bounds = None
@@ -87,23 +109,60 @@ class Node:
         self.last_transform = None
 
     def __repr__(self):
-        return "Node(%s, %s, %s)" % (self.type, str(self.object), str(self._parent))
+        return "Node('%s', %s, %s)" % (self.type, str(self.object), str(self._parent))
 
     def __eq__(self, other):
         return other is self
+
+    def is_movable(self):
+        return self.type not in ("branch elems", "branch ops", "root")
+
+    def drop(self, drag_node):
+        drop_node = self
+        if drag_node.type == "elem":
+            if drop_node.type == "op":
+                # Dragging element into operation adds that element to the op.
+                drop_node.add(drag_node.object, type="opnode", pos=0)
+                return True
+            elif drop_node.type == "opnode":
+                drop_index = drop_node.parent.children.index(drop_node)
+                drop_node.parent.add(drag_node.object, type="opnode", pos=drop_index)
+                return True
+        elif drag_node.type == "opnode":
+            if drop_node.type == "op":
+                drop_node.append_child(drag_node)
+                return True
+            if drop_node.type == "opnode":
+                drop_node.insert_sibling(drag_node)
+                return True
+        elif drag_node.type == "cmdop":
+            if drop_node.type == "op" or drop_node.type == "cmdop":
+                drop_node.insert_sibling(drag_node)
+        elif drag_node.type == "op":
+            if drop_node.type == "op":
+                # Dragging operation to different operation.
+                drop_node.insert_sibling(drag_node)
+                return True
+            elif drop_node.type == "branch ops":
+                # Dragging operation to op branch.
+                drop_node.append_child(drag_node)
+
+    def reverse(self):
+        self._children.reverse()
+        self.notify_reorder()
 
     @property
     def children(self):
         return self._children
 
     @property
-    def selected(self):
-        return self._selected
+    def targeted(self):
+        return self._target
 
-    @selected.setter
-    def selected(self, value):
-        self._selected = value
-        self.notify_selected(self)
+    @targeted.setter
+    def targeted(self, value):
+        self._target = value
+        self.notify_targeted(self)
 
     @property
     def highlighted(self):
@@ -138,40 +197,94 @@ class Node:
                 self._bounds = self.object.bbox()
             except AttributeError:
                 self._bounds = None
+            for e in self._children:
+                bb = e.bounds
+                if bb is None:
+                    continue
+                elif self._bounds is None:
+                    self._bounds = bb
+                else:
+                    aa = self._bounds
+                    self._bounds = (
+                        min(aa[0], bb[0]),
+                        min(aa[1], bb[1]),
+                        max(aa[2], bb[2]),
+                        max(aa[3], bb[3]),
+                    )
             self._bounds_dirty = False
         return self._bounds
 
-    def notify_added(self, node):
+    def notify_added(self, node=None, **kwargs):
         if self._root is not None:
-            self._root.notify_added(node)
+            if node is None:
+                node = self
+            self._root.notify_added(node=node, **kwargs)
 
-    def notify_removed(self, node):
+    def notify_removed(self, node=None, **kwargs):
         if self._root is not None:
-            self._root.notify_removed(node)
+            if node is None:
+                node = self
+            self._root.notify_removed(node=node, **kwargs)
 
-    def notify_changed(self, node):
+    def notify_changed(self, node, **kwargs):
         if self._root is not None:
-            self._root.notify_changed(node)
+            if node is None:
+                node = self
+            self._root.notify_changed(node=node, **kwargs)
 
-    def notify_emphasized(self, node):
+    def notify_emphasized(self, node=None, **kwargs):
         if self._root is not None:
-            self._root.notify_emphasized(node)
+            if node is None:
+                node = self
+            self._root.notify_emphasized(node=node, **kwargs)
 
-    def notify_selected(self, node):
+    def notify_targeted(self, node=None, **kwargs):
         if self._root is not None:
-            self._root.notify_selected(node)
+            if node is None:
+                node = self
+            self._root.notify_targeted(node=node, **kwargs)
 
-    def notify_highlighted(self, node):
+    def notify_highlighted(self, node=None, **kwargs):
         if self._root is not None:
-            self._root.notify_highlighted(node)
+            if node is None:
+                node = self
+            self._root.notify_highlighted(node=node, **kwargs)
 
-    def notify_modified(self, node):
+    def notify_modified(self, node=None, **kwargs):
         if self._root is not None:
-            self._root.notify_modified(node)
+            if node is None:
+                node = self
+            self._root.notify_modified(node=node, **kwargs)
 
-    def notify_altered(self, node):
+    def notify_altered(self, node=None, **kwargs):
         if self._root is not None:
-            self._root.notify_changed(node)
+            if node is None:
+                node = self
+            self._root.notify_altered(node=node, **kwargs)
+
+    def notify_expand(self, node=None, **kwargs):
+        if self._root is not None:
+            if node is None:
+                node = self
+            self._root.notify_expand(node=node, **kwargs)
+
+    def notify_collapse(self, node=None, **kwargs):
+        if self._root is not None:
+            if node is None:
+                node = self
+            self._root.notify_collapse(node=node, **kwargs)
+
+    def notify_reorder(self, node=None, **kwargs):
+        if self._root is not None:
+            if node is None:
+                node = self
+            self._root.notify_reorder(node=node, **kwargs)
+
+    def notify_update(self, node=None, **kwargs):
+        if self._root is not None:
+            if node is None:
+                node = self
+            self._root.notify_update(node=node, **kwargs)
 
     def modified(self):
         """
@@ -179,6 +292,7 @@ class Node:
         """
         self.notify_modified(self)
         self._bounds_dirty = True
+        self._bounds = None
 
     def altered(self):
         """
@@ -196,8 +310,8 @@ class Node:
         self.cache = None
         self.icon = None
         self._bounds = None
-        self.notify_altered()
-        self._root.bounds = None
+        self._bounds_dirty = True
+        self.notify_altered(self)
 
     def unregister(self):
         try:
@@ -213,21 +327,44 @@ class Node:
         except AttributeError:
             pass
         try:
-            self.selected = False
+            self.targeted = False
             self.emphasized = False
             self.highlighted = False
             self.modified()
         except AttributeError:
             pass
 
-    def attach(self, node, pos=None):
-        """
-        Attach the given node as a child to the current node.
+    def add_all(self, objects, type=None, name=None, pos=None):
+        for object in objects:
+            self.add(object, type=type, name=name, pos=pos)
+            if pos is not None:
+                pos += 1
 
-        :param node: Node to attach.
-        :param pos:  Position to occupy
+    def add(self, data_object=None, type=None, name=None, pos=None):
+        """
+        Add a new node bound to the data_object of the type to the current node.
+        If the data_object itself is a node already it is merely attached.
+
+        :param data_object:
+        :param type:
+        :param name:
+        :param single:
+        :param pos:
         :return:
         """
+        if isinstance(data_object, Node):
+            node = data_object
+            if node._parent != None:
+                raise ValueError("Cannot reparent node on add.")
+        else:
+            node_class = Node
+            try:
+                node_class = self._root.bootstrap[type]
+            except Exception:
+                pass
+            node = node_class(data_object)
+            node.set_name(name)
+        node.type = type
 
         node._parent = self
         node._root = self.root
@@ -235,27 +372,7 @@ class Node:
             self._children.append(node)
         else:
             self._children.insert(pos, node)
-        self.notify_added(node)
-
-    def add_node(self, data_object, node_type=-1, name=None, single=False, pos=None):
-        """
-        Add a new node bound to the data_object of the given type to the current node.
-
-        :param data_object:
-        :param node_type:
-        :param name:
-        :param single:
-        :param pos:
-        :return:
-        """
-        node = Node()
-        node.object = data_object
-        node.single = single
-        if single:
-            data_object.node = node
-        node.set_name(name)
-        node.type = node_type
-        self.attach(node, pos=pos)
+        node.notify_added(node, pos=pos)
         return node
 
     def set_name(self, name):
@@ -276,6 +393,78 @@ class Node:
         else:
             self.name = name
 
+    def _flatten(self, node):
+        """
+        Yield this node and all descendants in a flat generation.
+
+        :param node: starting node
+        :return:
+        """
+        yield node
+        for c in self._flatten_children(node):
+            yield c
+
+    def _flatten_children(self, node):
+        """
+        Yield all descendants in a flat generation.
+
+        :param node: starting node
+        :return:
+        """
+        for child in node.children:
+            yield child
+            for c in self._flatten_children(child):
+                yield c
+
+    def flat(
+        self,
+        types=None,
+        cascade=True,
+        depth=None,
+        emphasized=None,
+        targeted=None,
+        highlighted=None,
+    ):
+        """
+        Returned flat list of matching nodes. If cascade is set then any matching group will give all the descendants
+        of the given type, even if those descendants are beyond the depth limit. The sub-elements do not need to match
+        the criteria with respect to either the depth or the emphases.
+
+        :param types: types of nodes permitted to be returned
+        :param cascade: cascade all subitems if a group matches the criteria.
+        :param depth: depth to search within the tree.
+        :param emphasized: match only emphasized nodes.
+        :param targeted: match only targeted nodes
+        :param highlighted: match only highlighted nodes
+        :return:
+        """
+        node = self
+        if (
+            (targeted is None or targeted == node.targeted)
+            and (emphasized is None or emphasized == node.emphasized)
+            and (highlighted is None or highlighted != node.highlighted)
+        ):
+            # Matches the emphases.
+            if cascade:
+                # Give every type-matched descendant.
+                for c in self._flatten(node):
+                    if types is None or c.type in types:
+                        yield c
+                # Do not recurse further. This node is end node.
+                return
+            else:
+                if types is None or node.type in types:
+                    yield node
+        if depth is not None:
+            if depth <= 0:
+                # Depth limit reached. Do not evaluate children.
+                return
+            depth -= 1
+        # Check all children.
+        for c in node.children:
+            for q in c.flat(types, cascade, depth, emphasized, targeted, highlighted):
+                yield q
+
     def count_children(self):
         return len(self._children)
 
@@ -286,138 +475,105 @@ class Node:
             for o in q.objects_of_children(types):
                 yield o
 
+    def append_child(self, new_child):
+        new_parent = self
+        drag_siblings = new_child.parent.children
+        drop_siblings = new_parent.children
+
+        drag_siblings.remove(new_child)
+        new_child.notify_removed(new_child)
+
+        drop_siblings.append(new_child)
+        new_child._parent = new_parent
+        new_child.notify_added(new_child)
+
+    def insert_sibling(self, new_sibling):
+        destination_sibling = self
+        drag_siblings = new_sibling.parent.children
+        drop_siblings = destination_sibling.parent.children
+
+        drop_pos = drop_siblings.index(destination_sibling)
+
+        drag_siblings.remove(new_sibling)
+        new_sibling.notify_removed(new_sibling)
+
+        drop_siblings.insert(drop_pos, new_sibling)
+        new_sibling._parent = destination_sibling._parent
+        new_sibling.notify_added(new_sibling, pos=drop_pos)
+
+    def replace_node(self, *args, **kwargs):
+        parent = self._parent
+        index = parent._children.index(self)
+        parent._children.remove(self)
+        self.notify_removed(self)
+        node = parent.add(*args, **kwargs, pos=index)
+        self._parent = None
+        self._root = None
+        self.type = None
+        return node
+
     def remove_node(self):
         self._parent._children.remove(self)
         self.notify_removed(self)
         self.item = None
         self._parent = None
         self._root = None
-        self.type = -1
+        self.type = None
 
     def remove_all_children(self):
         for child in list(self.children):
+            child.remove_all_children()
             child.remove_node()
 
-    def open_node(self):
-        objects = self.object
-        self._opened = True
-        if isinstance(objects, list):
-            for obj in objects:
-                self.add_node(obj)
-
-    def get_node(self, node_address: str):
-        try:
-            f = node_address.find(":")
-            if f == -1:
-                index = int(node_address)
-                return self[index]
-            index = int(node_address[:f])
-            node = self[index]
-            return node.get_node(node_address[f + 1 :])
-        except IndexError:
-            raise ValueError("Node Address Invalid.")
+    def get(self, obj=None, type=None):
+        if (obj is None or obj == self.object) and (type is None or type == self.type):
+            return self
+        for n in self._children:
+            node = n.get(obj, type)
+            if node is not None:
+                return node
 
     def move(self, dest, pos=None):
         self._parent.remove(self)
         dest.insert_node(self, pos=pos)
 
 
-class RootNode(Node):
-    def __init__(self, context):
-        super().__init__()
-        self._root = self
-        self.set_name("Project")
-        self.type = NODE_ROOT
-        self.context = context
-        self.listeners = []
+class ElemNode(Node):
+    """
+    ElemNode is the bootstrapped node type for the elem type. All elem types are bootstrapped into this node object.
+    """
 
-        self.elements = context.elements
-        self.add_node(None, NODE_OPERATION_BRANCH, name="Operations")
-        self.add_node(None, NODE_ELEMENTS_BRANCH, name="Elements")
-        self.add_node(None, NODE_FILES_BRANCH, name="Files")
+    def __init__(self, data_object):
+        super(ElemNode, self).__init__(data_object)
+        self.last_transform = None
+        data_object.node = self
 
-    def get_branch(self, node_type):
-        for n in self._children:
-            if n.type == node_type:
-                return n
+    def __repr__(self):
+        return "ElemNode('%s', %s, %s)" % (self.type, str(self.object), str(self._parent))
 
-    def listen(self, listener):
-        self.listeners.append(listener)
-
-    def unlisten(self, listener):
-        self.listeners.remove(listener)
-
-    def notify_added(self, node):
-        for listen in self.listeners:
-            try:
-                listen.node_added(node)
-            except AttributeError:
-                pass
-
-    def notify_removed(self, node):
-        for listen in self.listeners:
-            try:
-                listen.node_removed(node)
-            except AttributeError:
-                pass
-
-    def notify_changed(self, node):
-        for listen in self.listeners:
-            try:
-                listen.node_changed(node)
-            except AttributeError:
-                pass
-
-    def notify_emphasized(self, node):
-        for listen in self.listeners:
-            try:
-                listen.emphasized(node)
-            except AttributeError:
-                pass
-
-    def notify_selected(self, node):
-        for listen in self.listeners:
-            try:
-                listen.selected(node)
-            except AttributeError:
-                pass
-
-    def notify_highlighted(self, node):
-        for listen in self.listeners:
-            try:
-                listen.highlighted(node)
-            except AttributeError:
-                pass
-
-    def notify_modified(self, node):
-        self._bounds = None
-        # self.validate_bounds()
-        for listen in self.listeners:
-            try:
-                listen.modified(node)
-            except AttributeError:
-                pass
-
-    def notify_altered(self, node):
-        for listen in self.listeners:
-            try:
-                listen.altered(node)
-            except AttributeError:
-                pass
+    def drop(self, drag_node):
+        drop_node = self
+        # Dragging element into element.
+        if drag_node.type == "elem":
+            drop_node.insert_sibling(drag_node)
+            return True
+        return False
 
 
 class LaserOperation(Node):
     """
     Default object defining any operation done on the laser.
+
+    This is an Node type "op".
     """
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        self.operation = None
+        self._operation = None
         try:
-            self.operation = kwargs["operation"]
+            self._operation = kwargs["operation"]
         except KeyError:
-            self.operation = "Unknown"
+            self._operation = "Unknown"
         self.output = True
         self.show = True
 
@@ -440,9 +596,9 @@ class LaserOperation(Node):
         if len(args) == 1:
             obj = args[0]
             if isinstance(obj, SVGElement):
-                self.add_node(obj)
+                self.add(obj, type="opnode")
             elif isinstance(obj, LaserOperation):
-                self.operation = obj.operation
+                self._operation = obj.operation
 
                 self.color = Color(obj.color)
                 self.output = obj.output
@@ -452,7 +608,7 @@ class LaserOperation(Node):
 
                 for element in obj.children:
                     element_copy = copy(element.object)
-                    self.add_node(element_copy)
+                    self.add(element_copy, type="opnode")
         if self.operation == "Cut":
             if self.settings.speed is None:
                 self.settings.speed = 10.0
@@ -471,15 +627,24 @@ class LaserOperation(Node):
             if self.settings.power is None:
                 self.settings.power = 1000.0
 
+    def __repr__(self):
+        return "LaserOperation('%s', %s)" % (self.type, str(self._operation))
+
     def __str__(self):
-        op = self.operation
+        op = self._operation
+        parts = list()
+        if not self.output:
+            parts.append("(Disabled)")
+        if self.settings.passes_custom and self.settings.passes != 1:
+            parts.append("%dX" % self.settings.passes)
         if op is None:
             op = "Unknown"
-        if self.operation == "Raster":
+        if self._operation == "Raster":
             op += str(self.settings.raster_step)
-        parts = list()
+        parts.append(op)
+
         parts.append("%gmm/s" % self.settings.speed)
-        if self.operation in ("Raster", "Image"):
+        if self._operation in ("Raster", "Image"):
             if self.settings.raster_swing:
                 raster_dir = "-"
             else:
@@ -498,7 +663,7 @@ class LaserOperation(Node):
                 raster_dir += "%d" % self.settings.raster_direction
             parts.append(raster_dir)
         parts.append("%gppi" % self.settings.power)
-        if self.operation in ("Raster", "Image"):
+        if self._operation in ("Raster", "Image"):
             if isinstance(self.settings.overscan, str):
                 parts.append("±%s" % self.settings.overscan)
             else:
@@ -507,19 +672,24 @@ class LaserOperation(Node):
             parts.append("d:%g" % self.settings.dratio)
         if self.settings.acceleration_custom:
             parts.append("a:%d" % self.settings.acceleration)
-        if self.settings.passes_custom:
-            parts.append("passes: %d" % self.settings.passes)
         if self.settings.dot_length_custom:
             parts.append("dot: %d" % self.settings.dot_length)
-        if not self.output:
-            op = "(Disabled) " + op
-        return "%s %s" % (op, " ".join(parts))
+        return " ".join(parts)
 
     def __copy__(self):
         return LaserOperation(self)
 
+    @property
+    def operation(self):
+        return self._operation
+
+    @operation.setter
+    def operation(self, v):
+        self._operation = v
+        self.notify_update()
+
     def time_estimate(self):
-        if self.operation in ("Cut", "Engrave"):
+        if self._operation in ("Cut", "Engrave"):
             estimate = 0
             for e in self.children:
                 e = e.object
@@ -539,7 +709,7 @@ class LaserOperation(Node):
                 str(int(minutes)).zfill(2),
                 str(int(seconds)).zfill(2),
             )
-        elif self.operation in ("Raster", "Image"):
+        elif self._operation in ("Raster", "Image"):
             estimate = 0
             for e in self.children:
                 e = e.object
@@ -566,7 +736,7 @@ class LaserOperation(Node):
     def as_blob(self):
         c = CutCode()
         settings = self.settings
-        if self.operation in ("Cut", "Engrave"):
+        if self._operation in ("Cut", "Engrave"):
             for object_path in self.children:
                 object_path = object_path.object
                 if isinstance(object_path, SVGImage):
@@ -610,11 +780,11 @@ class LaserOperation(Node):
                     elif isinstance(seg, Arc):
                         arc = ArcCut(seg, settings=settings)
                         c.append(arc)
-        elif self.operation == "Raster":
+        elif self._operation == "Raster":
             direction = settings.raster_direction
             settings.crosshatch = False
             if direction == 4:
-                cross_settings = LaserSettings(self.operation.settings)
+                cross_settings = LaserSettings(settings)
                 cross_settings.crosshatch = True
                 for object_image in self.children:
                     object_image = object_image.object
@@ -624,38 +794,48 @@ class LaserOperation(Node):
                 for object_image in self.children:
                     object_image = object_image.object
                     c.append(RasterCut(object_image, settings))
-        elif self.operation == "Image":
-            for object_image in self.children:
-                object_image = object_image.object
-                settings = LaserSettings(self.settings)
-                try:
-                    settings.raster_step = int(object_image.values["raster_step"])
-                except KeyError:
-                    settings.raster_step = 1
-                direction = settings.raster_direction
-                settings.crosshatch = False
-                if direction == 4:
-                    cross_settings = LaserSettings(settings)
-                    cross_settings.crosshatch = True
-                    c.append(RasterCut(object_image, settings))
-                    c.append(RasterCut(object_image, cross_settings))
-                else:
-                    c.append(RasterCut(object_image, settings))
+        elif self._operation == "Image":
+                for object_image in self.children:
+                    object_image = object_image.object
+                    settings = LaserSettings(self.settings)
+                    try:
+                        settings.raster_step = int(object_image.values["raster_step"])
+                    except KeyError:
+                        settings.raster_step = 1
+                    direction = settings.raster_direction
+                    settings.crosshatch = False
+                    if direction == 4:
+                        cross_settings = LaserSettings(settings)
+                        cross_settings.crosshatch = True
+                        c.append(RasterCut(object_image, settings))
+                        c.append(RasterCut(object_image, cross_settings))
+                    else:
+                        c.append(RasterCut(object_image, settings))
+
+        if settings.passes_custom:
+            c *= settings.passes
         if len(c) == 0:
             return None
         return c
 
 
 class CommandOperation(Node):
-    """CommandOperation is a basic command operation. It contains nothing except a single command to be executed."""
+    """
+    CommandOperation is a basic command operation. It contains nothing except a single command to be executed.
+
+    Node type "cmdop"
+    """
 
     def __init__(self, name, command, *args, **kwargs):
-        super().__init__(*args, name=name, **kwargs)
+        super().__init__(command, type="cmdop")
         self.name = name
         self.command = command
         self.args = args
         self.output = True
         self.operation = "Command"
+
+    def __repr__(self):
+        return "CommandOperation('%s', '%s')" % (self.name, str(self.command))
 
     def __str__(self):
         return "%s: %s" % (self.name, str(self.args))
@@ -668,6 +848,123 @@ class CommandOperation(Node):
 
     def generate(self):
         yield (self.command,) + self.args
+
+
+class RootNode(Node):
+    """
+    RootNode is one of the few directly declarable node-types and serves as the base type for all Node classes.
+    """
+
+    def __init__(self, context):
+        super().__init__(None)
+        self._root = self
+        self.set_name("Project")
+        self.type = "root"
+        self.context = context
+        self.listeners = []
+
+        self.elements = context.elements
+        self.bootstrap = {
+            "op": LaserOperation,
+            "cmdop": CommandOperation,
+            "elem": ElemNode,
+        }
+        self.add(type="branch ops", name="Operations")
+        self.add(type="branch elems", name="Elements")
+
+    def __repr__(self):
+        return "RootNode(%s)" % (str(self.context))
+
+    def listen(self, listener):
+        self.listeners.append(listener)
+
+    def unlisten(self, listener):
+        self.listeners.remove(listener)
+
+    def notify_added(self, node=None, **kwargs):
+        if node is None:
+            node = self
+        for listen in self.listeners:
+            if hasattr(listen, "node_added"):
+                listen.node_added(node, **kwargs)
+
+    def notify_removed(self, node=None, **kwargs):
+        if node is None:
+            node = self
+        for listen in self.listeners:
+            if hasattr(listen, "node_removed"):
+                listen.node_removed(node, **kwargs)
+
+    def notify_changed(self, node=None, **kwargs):
+        if node is None:
+            node = self
+        for listen in self.listeners:
+            if hasattr(listen, "node_changed"):
+                listen.node_changed(node, **kwargs)
+
+    def notify_emphasized(self, node=None, **kwargs):
+        if node is None:
+            node = self
+        for listen in self.listeners:
+            if hasattr(listen, "emphasized"):
+                listen.emphasized(node, **kwargs)
+
+    def notify_targeted(self, node=None, **kwargs):
+        if node is None:
+            node = self
+        for listen in self.listeners:
+            if hasattr(listen, "targeted"):
+                listen.targeted(node, **kwargs)
+
+    def notify_highlighted(self, node=None, **kwargs):
+        if node is None:
+            node = self
+        for listen in self.listeners:
+            if hasattr(listen, "highlighted"):
+                listen.highlighted(node, **kwargs)
+
+    def notify_modified(self, node=None, **kwargs):
+        if node is None:
+            node = self
+        self._bounds = None
+        for listen in self.listeners:
+            if hasattr(listen, "modified"):
+                listen.modified(node, **kwargs)
+
+    def notify_altered(self, node=None, **kwargs):
+        if node is None:
+            node = self
+        for listen in self.listeners:
+            if hasattr(listen, "altered"):
+                listen.altered(node, **kwargs)
+
+    def notify_expand(self, node=None, **kwargs):
+        if node is None:
+            node = self
+        for listen in self.listeners:
+            if hasattr(listen, "expand"):
+                listen.expand(node, **kwargs)
+
+    def notify_collapse(self, node=None, **kwargs):
+        if node is None:
+            node = self
+        for listen in self.listeners:
+            if hasattr(listen, "collapse"):
+                listen.collapse(node, **kwargs)
+
+    def notify_reorder(self, node=None, **kwargs):
+        if node is None:
+            node = self
+        for listen in self.listeners:
+            if hasattr(listen, "reorder"):
+                listen.reorder(node, **kwargs)
+
+    def notify_update(self, node=None, **kwargs):
+        if node is None:
+            node = self
+        for listen in self.listeners:
+            if hasattr(listen, "update"):
+                listen.update(node, **kwargs)
 
 
 class Elemental(Modifier):
@@ -687,8 +984,147 @@ class Elemental(Modifier):
         self._clipboard_default = "0"
 
         self.note = None
-        self._bounds = None
+        self._emphasized_bounds = None
+        self._emphasized_bounds_dirty = True
         self._tree = None
+
+    def tree_operations_for_node(self, node):
+        for m in self.context.match("tree/%s/.*" % node.type):
+            func = self.context.registered[m]
+            reject = False
+            for cond in func.conditionals:
+                if not cond(node):
+                    reject = True
+                    break
+            if reject:
+                continue
+            for cond in func.try_conditionals:
+                try:
+                    if not cond(node):
+                        reject = True
+                        break
+                except Exception:
+                    continue
+            if reject:
+                continue
+            func_dict = {
+                "name": str(node.name)[:15],
+            }
+
+            iterator = func.values
+            if iterator is None:
+                iterator = [0]
+            for i, value in enumerate(iterator):
+                func_dict["iterator"] = i
+                func_dict["value"] = value
+                try:
+                    func_dict[func.value_name] = value
+                except AttributeError:
+                    pass
+
+                for calc in func.calcs:
+                    key, c = calc
+                    value = c(value)
+                    func_dict[key] = value
+                if func.radio is not None:
+                    func.radio_state = func.radio(node, **func_dict)
+                else:
+                    func.radio_state = None
+                name = func.name.format_map(func_dict)
+                func.func_dict = func_dict
+                func.real_name = name
+
+                yield func
+
+    @staticmethod
+    def tree_calc(value_name, calc_func):
+        def decor(func):
+            func.calcs.append((value_name, calc_func))
+            return func
+
+        return decor
+
+    @staticmethod
+    def tree_values(value_name, values):
+        def decor(func):
+            func.value_name = value_name
+            func.values = values
+            return func
+
+        return decor
+
+    @staticmethod
+    def tree_iterate(value_name, start, stop, step=1):
+        def decor(func):
+            func.value_name = value_name
+            func.values = range(start, stop, step)
+            return func
+
+        return decor
+
+    @staticmethod
+    def tree_radio(radio_function):
+        def decor(func):
+            func.radio = radio_function
+            return func
+
+        return decor
+
+    @staticmethod
+    def tree_submenu(submenu):
+        def decor(func):
+            func.submenu = submenu
+            return func
+
+        return decor
+
+    @staticmethod
+    def tree_conditional(conditional):
+        def decor(func):
+            func.conditionals.append(conditional)
+            return func
+
+        return decor
+
+    @staticmethod
+    def tree_conditional_try(conditional):
+        def decor(func):
+            func.try_conditionals.append(conditional)
+            return func
+
+        return decor
+
+    def tree_operation(self, name, node_type=None, help=None, **kwargs):
+        def decorator(func):
+            @functools.wraps(func)
+            def inner(node, **ik):
+                returned = func(node, **ik, **kwargs)
+                return returned
+
+            kernel = self.context._kernel
+            if isinstance(node_type, tuple):
+                ins = node_type
+            else:
+                ins = (node_type,)
+
+            # inner.long_help = func.__doc__
+            inner.help = help
+            inner.node_type = ins
+            inner.name = name
+            inner.radio = None
+            inner.submenu = None
+            inner.conditionals = list()
+            inner.try_conditionals = list()
+            inner.calcs = list()
+            inner.values = [0]
+            registered_name = inner.__name__
+
+            for _in in ins:
+                p = "tree/%s/%s" % (_in, registered_name)
+                kernel.register(p, inner)
+            return inner
+
+        return decorator
 
     def attach(self, *a, **kwargs):
         context = self.context
@@ -700,6 +1136,9 @@ class Elemental(Modifier):
         context.load_types = self.load_types
         context = self.context
         self._tree = RootNode(context)
+        bed_dim = context.get_context('/')
+        bed_dim.setting(int, "bed_width", 310)
+        bed_dim.setting(int, "bed_height", 210)
 
         # Element Select
         @context.console_command(
@@ -709,8 +1148,8 @@ class Elemental(Modifier):
             output_type="elements",
         )
         def select(command, channel, _, data=None, args=tuple(), **kwargs):
-            self.set_selected(data)
-            return "elements", list(self.elems_nodes(emphasized=True))
+            self.set_emphasis(data)
+            return "elements", list(self.elems(emphasized=True))
 
         @context.console_command(
             "select+",
@@ -720,10 +1159,9 @@ class Elemental(Modifier):
         )
         def select(command, channel, _, data=None, args=tuple(), **kwargs):
             for e in data:
-                if not e.selected:
-                    e.selected = True
-                    e.emphasized = True
-            return "elements", list(self.elems_nodes(emphasized=True))
+                if not e.emphasized:
+                    e.node.emphasized = True
+            return "elements", list(self.elems(emphasized=True))
 
         @context.console_command(
             "select-",
@@ -733,10 +1171,9 @@ class Elemental(Modifier):
         )
         def select(command, channel, _, data=None, args=tuple(), **kwargs):
             for e in data:
-                if e.selected:
-                    e.selected = False
-                    e.emphasized = False
-            return "elements", list(self.elems_nodes(emphasized=True))
+                if e.node.emphasized:
+                    e.node.emphasized = False
+            return "elements", list(self.elems(emphasized=True))
 
         @context.console_command(
             "select^",
@@ -746,13 +1183,8 @@ class Elemental(Modifier):
         )
         def select(command, channel, _, data=None, args=tuple(), **kwargs):
             for e in data:
-                if e.selected:
-                    e.selected = False
-                    e.emphasize = False
-                else:
-                    e.selected = True
-                    e.emphasized = True
-            return "elements", list(self.elems_nodes(emphasized=True))
+                e.node.emphasized = not e.node.emphasized
+            return "elements", list(self.elems(emphasized=True))
 
         # Operation Select
         @context.console_command(
@@ -762,7 +1194,7 @@ class Elemental(Modifier):
             output_type="ops",
         )
         def select(command, channel, _, data=None, args=tuple(), **kwargs):
-            self.set_selected(data)
+            self.set_emphasis(data)
             return "ops", list(self.ops(emphasized=True))
 
         @context.console_command(
@@ -773,8 +1205,7 @@ class Elemental(Modifier):
         )
         def select(command, channel, _, data=None, args=tuple(), **kwargs):
             for e in data:
-                if not e.selected:
-                    e.selected = True
+                if not e.emphasized:
                     e.emphasized = True
             return "ops", list(self.ops(emphasized=True))
 
@@ -786,8 +1217,7 @@ class Elemental(Modifier):
         )
         def select(command, channel, _, data=None, args=tuple(), **kwargs):
             for e in data:
-                if e.selected:
-                    e.selected = False
+                if e.emphasized:
                     e.emphasize = False
             return "ops", list(self.ops(emphasized=True))
 
@@ -799,12 +1229,7 @@ class Elemental(Modifier):
         )
         def select(command, channel, _, data=None, args=tuple(), **kwargs):
             for e in data:
-                if e.selected:
-                    e.selected = False
-                    e.emphasize = False
-                else:
-                    e.selected = True
-                    e.emphasized = True
+                e.emphasized = not e.emphasized
             return "ops", list(self.ops(emphasized=True))
 
         # Element Base
@@ -814,7 +1239,7 @@ class Elemental(Modifier):
             output_type="elements",
         )
         def element(command, channel, _, args=tuple(), **kwargs):
-            return "elements", list(self.elems_nodes())
+            return "elements", list(self.elems())
 
         @context.console_command(
             "element~",
@@ -822,7 +1247,7 @@ class Elemental(Modifier):
             output_type="elements",
         )
         def element(command, channel, _, args=tuple(), **kwargs):
-            return "elements", list(self.elems_nodes(emphasized=False))
+            return "elements", list(self.elems(emphasized=False))
 
         @context.console_command(
             "element",
@@ -830,7 +1255,7 @@ class Elemental(Modifier):
             output_type="elements",
         )
         def element(command, channel, _, args=tuple(), **kwargs):
-            return "elements", list(self.elems_nodes(emphasized=True))
+            return "elements", list(self.elems(emphasized=True))
 
         @context.console_command(
             "elements",
@@ -841,12 +1266,11 @@ class Elemental(Modifier):
             channel(_("----------"))
             channel(_("Graphical Elements:"))
             i = 0
-            for n in self.elems_nodes():
-                e = n.object
+            for e in self.elems():
                 name = str(e)
                 if len(name) > 50:
                     name = name[:50] + "..."
-                if n.emphasized:
+                if e.node.emphasized:
                     channel("%d: * %s" % (i, name))
                 else:
                     channel("%d: %s" % (i, name))
@@ -854,7 +1278,7 @@ class Elemental(Modifier):
             channel("----------")
 
         @context.console_command(
-            r"element(\d+,?)+",
+            r"element([0-9]+,?)+",
             help="element0,3,4,5: elements 0, 3, 4, 5",
             regex=True,
             output_type="elements",
@@ -862,20 +1286,20 @@ class Elemental(Modifier):
         def element(command, channel, _, args=tuple(), **kwargs):
             arg = command[7:]
             if arg == "":
-                return "elements", list(self.elems_nodes(emphasized=True))
+                return "elements", list(self.elems(emphasized=True))
             elif arg == "*":
-                return "elements", list(self.elems_nodes())
+                return "elements", list(self.elems())
             elif arg == "~":
-                return "elements", list(self.elems_nodes(emphasized=False))
+                return "elements", list(self.elems(emphasized=False))
             elif arg == "s":
                 channel(_("----------"))
                 channel(_("Graphical Elements:"))
                 i = 0
-                for e in self.elems_nodes():
+                for e in self.elems():
                     name = str(e)
                     if len(name) > 50:
                         name = name[:50] + "..."
-                    if e.emphasized:
+                    if e.node.emphasized:
                         channel("%d: * %s" % (i, name))
                     else:
                         channel("%d: %s" % (i, name))
@@ -890,7 +1314,7 @@ class Elemental(Modifier):
                     except ValueError:
                         continue
                     try:
-                        e = self.get_elem_node(value)
+                        e = self.get_elem(value)
                         element_list.append(e)
                     except IndexError:
                         channel(_("index %d out of range") % value)
@@ -903,7 +1327,7 @@ class Elemental(Modifier):
             channel(_("----------"))
             channel(_("Operations:"))
             for i, operation in enumerate(self.ops()):
-                selected = False  # operation.selected #TODO: Restore in some fashion.
+                selected = operation.emphasized
                 select = " *" if selected else "  "
                 color = (
                     "None"
@@ -968,7 +1392,7 @@ class Elemental(Modifier):
         )
         def operation(command, channel, _, args=tuple(), **kwargs):
             arg = command[9:]
-            op_selected = []
+            op_values = []
             for value in arg.split(","):
                 try:
                     value = int(value)
@@ -976,10 +1400,10 @@ class Elemental(Modifier):
                     continue
                 try:
                     op = self.get_op(value)
-                    op_selected.append(op)
+                    op_values.append(op)
                 except IndexError:
                     channel(_("index %d out of range") % value)
-            return "ops", op_selected
+            return "ops", op_values
 
         @context.console_command(
             "tree", help="access and alter tree elements", output_type="tree"
@@ -1026,37 +1450,6 @@ class Elemental(Modifier):
             except IndexError:
                 raise SyntaxError
 
-        @context.console_argument(
-            "dest", type=self._tree.get_node, help="destination node"
-        )
-        @context.console_option(
-            "pos", "p", type=int, help="position within destination node"
-        )
-        @context.console_command(
-            "move",
-            help="<node> move <destination>, eg ... move 1:0",
-            input_type="tree",
-            output_type="tree",
-        )
-        def move(
-            command,
-            channel,
-            _,
-            data=None,
-            data_type=None,
-            dest=None,
-            pos=None,
-            args=tuple(),
-            **kwargs
-        ):
-            if data is None:
-                channel(_("No source node selected."))
-                return
-            if dest is None:
-                channel(_("No source node selected."))
-                return
-            data.move(dest, pos)
-
         @context.console_command(
             "copy",
             help="duplicate elements",
@@ -1070,7 +1463,7 @@ class Elemental(Modifier):
             if data_type == "ops":
                 self.add_ops(add_elem)
             else:
-                self.add_elems(add_elem.object)
+                self.add_elems(add_elem)
             return data_type, add_elem
 
         @context.console_command(
@@ -1090,7 +1483,7 @@ class Elemental(Modifier):
             "merge",
             help="merge elements",
             input_type="elements",
-            output_type="path",
+            output_type="elements",
         )
         def merge(command, channel, _, data=None, args=tuple(), **kwargs):
             superelement = Path()
@@ -1102,7 +1495,7 @@ class Elemental(Modifier):
                 superelement += abs(e)
             self.remove_elements(data)
             self.add_elem(superelement).emphasized = True
-            return "path", data
+            return "elements", [superelement]
 
         @context.console_command(
             "subpath",
@@ -1113,14 +1506,115 @@ class Elemental(Modifier):
         def subpath(command, channel, _, data=None, args=tuple(), **kwargs):
             if not isinstance(data, list):
                 data = list(data)
-            add = []
+            elems = []
             for e in data:
+                node = e.node
+                qnode = node.replace_node(type="group", name=node.name)
                 p = abs(e)
                 for subpath in p.as_subpaths():
                     subelement = Path(subpath)
-                    add.append(subelement)
-            self.add_elems(add)
-            return "elements", add
+                    qnode.add(subelement, type="elem")
+                elems.append(qnode)
+            return "elements", elems
+
+        @context.console_argument("align", type=str, help="Alignment position")
+        @context.console_command(
+            "align",
+            help="align elements",
+            input_type=("elements", None),
+            output_type="elements",
+        )
+        def align(command, channel, _, data=None, align=None, args=tuple(), **kwargs):
+            if data is None:
+                elem_branch = self.get(type="branch elems")
+                data = list(elem_branch.flat(types=("elems", "file", "group"), cascade=False, depth=1))
+            boundary_points = []
+            for d in data:
+                # d._bounds_dirty = True
+                boundary_points.append(d.bounds)
+            if not len(boundary_points):
+                return
+            left_edge = min([e[0] for e in boundary_points])
+            top_edge = min([e[1] for e in boundary_points])
+            right_edge = max([e[2] for e in boundary_points])
+            bottom_edge = max([e[3] for e in boundary_points])
+            if align == 'top':
+                for e in data:
+                    subbox = e.bounds
+                    top = subbox[1] - top_edge
+                    if top != 0:
+                        for q in e.flat(types="elem"):
+                            q.object *= "translate(0, %f)" % -top
+                            q.modified()
+            elif align == 'bottom':
+                for e in data:
+                    subbox = e.bounds
+                    bottom = subbox[3] - bottom_edge
+                    if bottom != 0:
+                        for q in e.flat(types="elem"):
+                            q.object *= "translate(0, %f)" % -bottom
+                            q.modified()
+            elif align == 'left':
+                for e in data:
+                    subbox = e.bounds
+                    left = subbox[0] - left_edge
+                    if left != 0:
+                        for q in e.flat(types="elem"):
+                            q.object *= "translate(%f, 0)" % -left
+                            q.modified()
+            elif align == 'right':
+                for e in data:
+                    subbox = e.bounds
+                    right = subbox[2] - right_edge
+                    if right != 0:
+                        for q in e.flat(types="elem"):
+                            q.object *= "translate(%f, 0)" % -right
+                            q.modified()
+            elif align == 'center':
+                for e in data:
+                    subbox = e.bounds
+                    dx = (subbox[0] + subbox[2] - left_edge - right_edge) / 2.0
+                    dy = (subbox[1] + subbox[3] - top_edge - bottom_edge) / 2.0
+                    for q in e.flat(types="elem"):
+                        q.object *= "translate(%f, %f)" % (-dx, -dy)
+                        q.modified()
+            elif align == 'centerv':
+                for e in data:
+                    subbox = e.bounds
+                    dx = (subbox[0] + subbox[2] - left_edge - right_edge) / 2.0
+                    for q in e.flat(types="elem"):
+                        q.object *= "translate(%f, 0)" % -dx
+                        q.modified()
+            elif align == 'centerh':
+                for e in data:
+                    subbox = e.bounds
+                    dy = (subbox[1] + subbox[3] - top_edge - bottom_edge) / 2.0
+                    for q in e.flat(types="elem"):
+                        q.object *= "translate(0, %f)" % -dy
+                        q.modified()
+            elif align == 'spaceh':
+                distance = right_edge - left_edge
+                step = distance / (len(data) - 1)
+                for e in data:
+                    subbox = e.bounds
+                    left = subbox[0] - left_edge
+                    left_edge += step
+                    if left != 0:
+                        for q in e.flat(types="elem"):
+                            q.object *= "translate(%f, 0)" % -left
+                            q.modified()
+            elif align == 'spacev':
+                distance = bottom_edge - top_edge
+                step = distance / (len(data) - 1)
+                for e in data:
+                    subbox = e.bounds
+                    top = subbox[1] - top_edge
+                    top_edge += step
+                    if top != 0:
+                        for q in e.flat(types="elem"):
+                            q.object *= "translate(0, %f)" % -top
+                            q.modified()
+            return "elements", data
 
         @context.console_argument("c", type=int, help="number of columns")
         @context.console_argument("r", type=int, help="number of rows")
@@ -1145,8 +1639,8 @@ class Elemental(Modifier):
             **kwargs
         ):
             if data is None:
-                data = list(self.elems_nodes(emphasized=True))
-            if len(data) == 0 or self._bounds is None:
+                data = list(self.elems(emphasized=True))
+            if len(data) == 0 or self._emphasized_bounds is None:
                 channel(_("No item selected."))
                 return
             if r is None:
@@ -1156,10 +1650,10 @@ class Elemental(Modifier):
                 y = y.value(ppi=1000)
             else:
                 try:
-                    bounds = self._bounds
+                    bounds = self._emphasized_bounds
                     x = bounds[2] - bounds[0]
                     y = bounds[3] - bounds[1]
-                except:
+                except Exception:
                     raise SyntaxError
             if isinstance(x, Length) or isinstance(y, Length):
                 raise SyntaxError
@@ -1204,7 +1698,7 @@ class Elemental(Modifier):
             if name is not None:
                 self._clipboard_default = name
             if data is None:
-                return "clipboard", list(self.elems_nodes(emphasized=True))
+                return "clipboard", list(self.elems(emphasized=True))
             else:
                 return "clipboard", data
 
@@ -1231,19 +1725,23 @@ class Elemental(Modifier):
             command, channel, _, data=None, dx=None, dy=None, args=tuple(), **kwargs
         ):
             destination = self._clipboard_default
-            pasted = [copy(e) for e in self._clipboard[destination]]
+            try:
+                pasted = [copy(e) for e in self._clipboard[destination]]
+            except KeyError:
+                channel(_("Error: Clipboard Empty"))
+                return
             if dx is not None or dy is not None:
                 if dx is None:
                     dx = 0
                 else:
                     dx = dx.value(
-                        ppi=1000.0, relative_length=self.context.bed_width * 39.3701
+                        ppi=1000.0, relative_length=bed_dim.bed_width * 39.3701
                     )
                 if dy is None:
                     dy = 0
                 else:
                     dy = dy.value(
-                        ppi=1000.0, relative_length=self.context.bed_height * 39.3701
+                        ppi=1000.0, relative_length=bed_dim.bed_height * 39.3701
                     )
                 m = Matrix("translate(%s, %s)" % (dx, dy))
                 for e in pasted:
@@ -1315,8 +1813,8 @@ class Elemental(Modifier):
             circ = Circle(cx=x_pos, cy=y_pos, r=r_pos)
             circ.render(
                 ppi=1000.0,
-                width="%fmm" % self.context.bed_width,
-                height="%fmm" % self.context.bed_height,
+                width="%fmm" % bed_dim.bed_width,
+                height="%fmm" % bed_dim.bed_height,
             )
             self.add_element(circ)
             if data is None:
@@ -1343,8 +1841,8 @@ class Elemental(Modifier):
             ellip = Ellipse(cx=x_pos, cy=y_pos, rx=rx_pos, ry=ry_pos)
             ellip.render(
                 ppi=1000.0,
-                width="%fmm" % self.context.bed_width,
-                height="%fmm" % self.context.bed_height,
+                width="%fmm" % bed_dim.bed_width,
+                height="%fmm" % bed_dim.bed_height,
             )
             self.add_element(ellip)
             if data is None:
@@ -1389,12 +1887,10 @@ class Elemental(Modifier):
             if x_pos is None:
                 raise SyntaxError
             rect = Rect(x=x_pos, y=y_pos, width=width, height=height, rx=rx, ry=ry)
-            self.context.setting(int, "bed_width", 310)  # Default Value
-            self.context.setting(int, "bed_height", 210)  # Default Value
             rect.render(
                 ppi=1000.0,
-                width="%fmm" % self.context.bed_width,
-                height="%fmm" % self.context.bed_height,
+                width="%fmm" % bed_dim.bed_width,
+                height="%fmm" % bed_dim.bed_height,
             )
             # rect = Path(rect)
             self.add_element(rect)
@@ -1404,45 +1900,56 @@ class Elemental(Modifier):
                 data.append(rect)
                 return "elements", data
 
-
-        @context.console_argument(
-            "x0", type=Length, help="start x position"
-        )
-        @context.console_argument(
-            "y0", type=Length, help="start y position"
-        )
+        @context.console_argument("x0", type=Length, help="start x position")
+        @context.console_argument("y0", type=Length, help="start y position")
         @context.console_argument("x1", type=Length, help="end x position")
-        @context.console_argument(
-            "y1", type=Length, help="end y position"
-        )
+        @context.console_argument("y1", type=Length, help="end y position")
         @context.console_command(
             "line",
             help="adds line to scene",
             input_type=("elements", None),
             output_type="elements",
         )
-        def rect(
-            command,
-            x0,
-            y0,
-            x1,
-            y1,
-            data=None,
-            args=tuple(),
-            **kwargs
-        ):
+        def line(command, x0, y0, x1, y1, data=None, args=tuple(), **kwargs):
+            """
+            Draws an svg line in the scene.
+            """
+            if y1 is None:
+                raise SyntaxError
+            simple_line = SimpleLine(x0, y0, x1, y1)
+            simple_line.render(
+                ppi=1000.0,
+                width="%fmm" % bed_dim.bed_width,
+                height="%fmm" % bed_dim.bed_height,
+            )
+            self.add_element(simple_line)
+            if data is None:
+                return "elements", [simple_line]
+            else:
+                data.append(simple_line)
+                return "elements", data
+
+        @context.console_argument("x0", type=Length, help="start x position")
+        @context.console_argument("y0", type=Length, help="start y position")
+        @context.console_argument("x1", type=Length, help="end x position")
+        @context.console_argument("y1", type=Length, help="end y position")
+        @context.console_command(
+            "line",
+            help="adds line to scene",
+            input_type=("elements", None),
+            output_type="elements",
+        )
+        def line_command(command, x0, y0, x1, y1, data=None, args=tuple(), **kwargs):
             """
             Draws an svg line in the scene.
             """
             if y1 is None:
                 raise SyntaxError
             line = SimpleLine(x0, y0, x1, y1)
-            self.context.setting(int, "bed_width", 310)  # Default Value
-            self.context.setting(int, "bed_height", 210)  # Default Value
             line.render(
                 ppi=1000.0,
-                width="%fmm" % self.context.bed_width,
-                height="%fmm" % self.context.bed_height,
+                width="%fmm" % bed_dim.bed_width,
+                height="%fmm" % bed_dim.bed_height,
             )
             self.add_element(line)
             if data is None:
@@ -1457,14 +1964,17 @@ class Elemental(Modifier):
             input_type=(None, "elements"),
             output_type="elements",
         )
-        def text(command, channel, _, data=None, args=tuple(), **kwargs):
-            text = " ".join(args)
-            element = SVGText(text)
-            self.add_element(element)
+        def text(command, channel, _, data=None, remainder=None, **kwargs):
+            if remainder is None:
+                channel(_("No text specified"))
+                return
+            text = remainder
+            svg_text = SVGText(text)
+            self.add_element(svg_text)
             if data is None:
-                return "elements", [element]
+                return "elements", [svg_text]
             else:
-                data.append(element)
+                data.append(svg_text)
                 return "elements", data
 
         # @context.console_argument("points", type=float, nargs="*", help='x, y of elements')
@@ -1522,13 +2032,14 @@ class Elemental(Modifier):
                 channel(_("No selected elements."))
                 return
             stroke_width = stroke_width.value(
-                ppi=1000.0, relative_length=self.context.bed_width * 39.3701
+                ppi=1000.0, relative_length=bed_dim.bed_width * 39.3701
             )
             if isinstance(stroke_width, Length):
                 raise SyntaxError
             for e in data:
                 e.stroke_width = stroke_width
-                e.altered()
+                if hasattr(e, 'node'):
+                     e.node.altered()
             context.signal("refresh_scene")
             return "elements", data
 
@@ -1569,11 +2080,13 @@ class Elemental(Modifier):
             if color == "none":
                 for e in data:
                     e.stroke = None
-                    e.altered()
+                    if hasattr(e, 'node'):
+                         e.node.altered()
             else:
                 for e in data:
                     e.stroke = Color(color)
-                    e.altered()
+                    if hasattr(e, 'node'):
+                         e.node.altered()
             context.signal("refresh_scene")
             return "elements", data
 
@@ -1610,13 +2123,73 @@ class Elemental(Modifier):
             if color == "none":
                 for e in data:
                     e.fill = None
-                    e.altered()
+                    if hasattr(e, 'node'):
+                         e.node.altered()
             else:
                 for e in data:
                     e.fill = Color(color)
-                    e.altered()
+                    if hasattr(e, 'node'):
+                         e.node.altered()
             context.signal("refresh_scene")
             return
+
+        @context.console_argument("x_offset", type=Length, help="x offset.")
+        @context.console_argument("y_offset", type=Length, help="y offset")
+        @context.console_command(
+            "outline",
+            help="outline the current selected elements",
+            input_type=(
+                None,
+                "elements",
+            ),
+            output_type="elements",
+        )
+        def outline(
+            command,
+            channel,
+            _,
+            x_offset=None,
+            y_offset=None,
+            data=None,
+            args=tuple(),
+            **kwargs
+        ):
+            """
+            Draws an outline of the current shape.
+            """
+            if x_offset is None:
+                raise SyntaxError
+            bounds = self.selected_area()
+            if bounds is None:
+                channel(_("Nothing Selected"))
+                return
+            x_pos = bounds[0]
+            y_pos = bounds[1]
+            width = bounds[2] - bounds[0]
+            height = bounds[3] - bounds[1]
+            offset_x = (
+                y_offset.value(ppi=1000.0, relative_length=width)
+                if len(args) >= 1
+                else 0
+            )
+            offset_y = (
+                x_offset.value(ppi=1000.0, relative_length=height)
+                if len(args) >= 2
+                else offset_x
+            )
+
+            x_pos -= offset_x
+            y_pos -= offset_y
+            width += offset_x * 2
+            height += offset_y * 2
+            element = Path(Rect(x=x_pos, y=y_pos, width=width, height=height))
+            self.add_element(element, "red")
+            self.classify([element])
+            if data is None:
+                return "elements", [element]
+            else:
+                data.append(element)
+                return "elements", data
 
         @context.console_argument("angle", type=Angle.parse, help="angle to rotate by")
         @context.console_option("cx", "x", type=Length, help="center x")
@@ -1669,18 +2242,19 @@ class Elemental(Modifier):
             if len(data) == 0:
                 channel(_("No selected elements."))
                 return
-            bounds = self.bounds()
+            self.validate_selected_area()
+            bounds = self.selected_area()
             rot = angle.as_degrees
 
             if cx is not None:
                 cx = cx.value(
-                    ppi=1000.0, relative_length=self.context.bed_width * 39.3701
+                    ppi=1000.0, relative_length=bed_dim.bed_width * 39.3701
                 )
             else:
                 cx = (bounds[2] + bounds[0]) / 2.0
             if cy is not None:
                 cy = cy.value(
-                    ppi=1000.0, relative_length=self.context.bed_height * 39.3701
+                    ppi=1000.0, relative_length=bed_dim.bed_height * 39.3701
                 )
             else:
                 cy = (bounds[3] + bounds[1]) / 2.0
@@ -1695,7 +2269,8 @@ class Elemental(Modifier):
                             pass
 
                         element *= matrix
-                        element.modified()
+                        if hasattr(element, 'node'):
+                            element.node.modified()
                 else:
                     for element in self.elems(emphasized=True):
                         start_angle = element.rotation
@@ -1704,7 +2279,8 @@ class Elemental(Modifier):
                             "rotate(%f,%f,%f)" % (Angle(amount).as_degrees, cx, cy)
                         )
                         element *= matrix
-                        element.modified()
+                        if hasattr(element, 'node'):
+                            element.node.modified()
             except ValueError:
                 raise SyntaxError
             context.signal("refresh_scene")
@@ -1765,18 +2341,18 @@ class Elemental(Modifier):
             if len(data) == 0:
                 channel(_("No selected elements."))
                 return
-            bounds = self.bounds()
+            bounds = Group.union_bbox(data)
             if scale_y is None:
                 scale_y = scale_x
             if px is not None:
                 center_x = px.value(
-                    ppi=1000.0, relative_length=self.context.bed_width * 39.3701
+                    ppi=1000.0, relative_length=bed_dim.bed_width * 39.3701
                 )
             else:
                 center_x = (bounds[2] + bounds[0]) / 2.0
             if py is not None:
                 center_y = py.value(
-                    ppi=1000.0, relative_length=self.context.bed_width * 39.3701
+                    ppi=1000.0, relative_length=bed_dim.bed_height * 39.3701
                 )
             else:
                 center_y = (bounds[3] + bounds[1]) / 2.0
@@ -1794,7 +2370,8 @@ class Elemental(Modifier):
                             pass
 
                         e *= m
-                        e.modified()
+                        if hasattr(e, 'node'):
+                             e.node.modified()
                 else:
                     for e in data:
                         try:
@@ -1811,7 +2388,8 @@ class Elemental(Modifier):
                             "scale(%f,%f,%f,%f)" % (nsx, nsy, center_x, center_y)
                         )
                         e *= m
-                        e.modified()
+                        if hasattr(e, 'node'):
+                             e.node.modified()
             except ValueError:
                 raise SyntaxError
             context.signal("refresh_scene")
@@ -1870,13 +2448,13 @@ class Elemental(Modifier):
                 return
             if tx is not None:
                 tx = tx.value(
-                    ppi=1000.0, relative_length=self.context.bed_width * 39.3701
+                    ppi=1000.0, relative_length=bed_dim.bed_width * 39.3701
                 )
             else:
                 tx = 0
             if ty is not None:
                 ty = ty.value(
-                    ppi=1000.0, relative_length=self.context.bed_width * 39.3701
+                    ppi=1000.0, relative_length=bed_dim.bed_height * 39.3701
                 )
             else:
                 ty = 0
@@ -1885,7 +2463,8 @@ class Elemental(Modifier):
                 if not absolute:
                     for e in data:
                         e *= m
-                        e.modified()
+                        if hasattr(e, 'node'):
+                             e.node.modified()
                 else:
                     for e in data:
                         otx = e.transform.value_trans_x()
@@ -1894,7 +2473,8 @@ class Elemental(Modifier):
                         nty = ty - oty
                         m = Matrix("translate(%f,%f)" % (ntx, nty))
                         e *= m
-                        e.modified()
+                        if hasattr(e, 'node'):
+                             e.node.modified()
             except ValueError:
                 raise SyntaxError
             context.signal("refresh_scene")
@@ -1921,18 +2501,18 @@ class Elemental(Modifier):
                 raise SyntaxError
             try:
                 x_pos = x_pos.value(
-                    ppi=1000.0, relative_length=self.context.bed_width * 39.3701
+                    ppi=1000.0, relative_length=bed_dim.bed_width * 39.3701
                 )
                 y_pos = y_pos.value(
-                    ppi=1000.0, relative_length=self.context.bed_height * 39.3701
+                    ppi=1000.0, relative_length=bed_dim.bed_height * 39.3701
                 )
                 width = width.value(
-                    ppi=1000.0, relative_length=self.context.bed_height * 39.3701
+                    ppi=1000.0, relative_length=bed_dim.bed_width * 39.3701
                 )
                 height = height.value(
-                    ppi=1000.0, relative_length=self.context.bed_height * 39.3701
+                    ppi=1000.0, relative_length=bed_dim.bed_height * 39.3701
                 )
-                x, y, x1, y1 = self.bounds()
+                x, y, x1, y1 = self.selected_area()
                 w, h = x1 - x, y1 - y
                 sx = width / w
                 sy = height / h
@@ -1949,7 +2529,8 @@ class Elemental(Modifier):
                     except AttributeError:
                         pass
                     e *= m
-                    e.modified()
+                    if hasattr(e, 'node'):
+                         e.node.modified()
                 context.signal("refresh_scene")
                 return "elements", data
             except (ValueError, ZeroDivisionError):
@@ -2007,10 +2588,10 @@ class Elemental(Modifier):
                     sy,
                     ky,
                     tx.value(
-                        ppi=1000.0, relative_length=self.context.bed_width * 39.3701
+                        ppi=1000.0, relative_length=bed_dim.bed_width * 39.3701
                     ),
                     ty.value(
-                        ppi=1000.0, relative_length=self.context.bed_width * 39.3701
+                        ppi=1000.0, relative_length=bed_dim.bed_height * 39.3701
                     ),
                 )
                 for e in data:
@@ -2021,7 +2602,8 @@ class Elemental(Modifier):
                         pass
 
                     e.transform = Matrix(m)
-                    e.modified()
+                    if hasattr(e, 'node'):
+                         e.node.modified()
             except ValueError:
                 raise SyntaxError
             context.signal("refresh_scene")
@@ -2048,7 +2630,8 @@ class Elemental(Modifier):
                     name = name[:50] + "..."
                 channel(_("reset - %s") % name)
                 e.transform.reset()
-                e.modified()
+                if hasattr(e, 'node'):
+                     e.node.modified()
             context.signal("refresh_scene")
             return "elements", data
 
@@ -2073,7 +2656,8 @@ class Elemental(Modifier):
                     name = name[:50] + "..."
                 channel(_("reified - %s") % name)
                 e.reify()
-                e.altered()
+                if hasattr(e, 'node'):
+                     e.node.altered()
             context.signal("refresh_scene")
             return "elements", data
 
@@ -2107,18 +2691,22 @@ class Elemental(Modifier):
             self.remove_elements_from_operations(data)
             return "elements", data
 
-        @context.console_argument("note", type=str, help="message to set as note")
+        @context.console_option("append", "a", type=bool, action="store_true", default=False)
         @context.console_command("note", help="note <note>")
-        def note(command, channel, _, note, args=tuple(), **kwargs):
+        def note(command, channel, _, append=False, remainder=None, **kwargs):
+            note = remainder
             if note is None:
                 if self.note is None:
                     channel(_("No Note."))
                 else:
                     channel(str(self.note))
             else:
-                # TODO: Note should take nargs.
-                self.note = note + " " + " ".join(args)
+                if append:
+                    self.note += "\n" + note
+                else:
+                    self.note = note
                 channel(_("Note Set."))
+                channel(str(self.note))
 
         @context.console_option("speed", "s", type=float)
         @context.console_option("power", "p", type=float)
@@ -2144,8 +2732,6 @@ class Elemental(Modifier):
             args=tuple(),
             **kwargs
         ):
-            if data is None:
-                data = self.ops(emphasized=True)
             op = LaserOperation()
             if color is not None:
                 op.color = color
@@ -2158,7 +2744,7 @@ class Elemental(Modifier):
             if overscan is not None:
                 op.settings.overscan = int(
                     overscan.value(
-                        ppi=1000.0, relative_length=self.context.bed_width * 39.3701
+                        ppi=1000.0, relative_length=bed_dim.bed_width * 39.3701
                     )
                 )
             if command == "cut":
@@ -2169,7 +2755,8 @@ class Elemental(Modifier):
                 op.operation = "Raster"
             elif command == "imageop":
                 op.operation = "Image"
-            op.extend(data)
+            if data is not None:
+                op.children.extend(data)
             self.add_op(op)
             return "ops", [op]
 
@@ -2210,7 +2797,8 @@ class Elemental(Modifier):
                 ty = m.f
                 element.transform = Matrix.scale(float(step_size), float(step_size))
                 element.transform.post_translate(tx, ty)
-                element.modified()
+                if hasattr(element, 'node'):
+                     element.node.modified()
                 self.context.signal("element_property_update", element)
                 self.context.signal("refresh_scene")
             return
@@ -2256,7 +2844,7 @@ class Elemental(Modifier):
             if context.active is None:
                 return
             spooler = context.active.spooler
-            bbox = self.bounds()
+            bbox = self.selected_area()
             if bbox is None:
                 channel(_("No elements bounds to trace."))
                 return
@@ -2270,6 +2858,572 @@ class Elemental(Modifier):
                 yield COMMAND_MOVE, bbox[0], bbox[1]
 
             spooler.job(trace_quick)
+
+        # --------------------------- END COMMANDS ------------------------------
+
+        # --------------------------- TREE OPERATIONS ---------------------------
+
+        _ = self.context._kernel.translation
+
+        @self.tree_operation(
+            _("Ungroup Elements"), node_type=("group", "file"), help=""
+        )
+        def ungroup_elements(node, **kwargs):
+            for n in list(node.children):
+                node.insert_sibling(n)
+            node.remove_node()
+
+        @self.tree_operation(
+            _("Group Elements"), node_type="elem", help=""
+        )
+        def group_elements(node, **kwargs):
+            # group_node = node.parent.add_sibling(node, type="group", name="Group")
+            group_node = node.parent.add(type="group", name="Group")
+            for e in list(self.elems(emphasized=True)):
+                node = e.node
+                group_node.append_child(node)
+
+        @self.tree_operation(
+            _("Execute Job"),
+            node_type="op",
+            help="Execute Job for the particular element.",
+        )
+        def execute_job(node, **kwargs):
+            # self.context.open("window/JobPreview", self.gui, "0", selected=True)
+            node.emphasized = True
+            self.context("plan0 copy-selected\n")
+            self.context("window -p / open JobPreview 0\n")
+
+        @self.tree_operation(_("Clear All"), node_type="branch ops", help="")
+        def clear_all(node, **kwargs):
+            self.context("operation* delete\n")
+
+        @self.tree_operation(_("Clear All"), node_type="branch elems", help="")
+        def clear_all_ops(node, **kwargs):
+            self.context("element* delete\n")
+
+        @self.tree_operation(
+            _("Remove: {name}"), node_type="op", help=""
+        )
+        def remove_types(node, **kwargs):
+            # self.context("operation delete\n")
+            node.remove_node()
+            # self.remove_orphaned_opnodes()
+            self.set_emphasis(None)
+
+        @self.tree_operation(
+            _("Remove: {name}"), node_type="elem", help=""
+        )
+        def remove_types(node, **kwargs):
+            # self.context("element delete\n")
+            node.remove_node()
+            self.remove_orphaned_opnodes()
+            self.set_emphasis(None)
+
+        @self.tree_operation(
+            _("Remove: {name}"), node_type="file", help=""
+        )
+        def remove_types(node, **kwargs):
+            node.remove_all_children()
+            node.remove_node()
+            self.remove_orphaned_opnodes()
+            self.set_emphasis(None)
+
+        @self.tree_operation(
+            _("Remove: {name}"), node_type="opnode", help=""
+        )
+        def remove_types(node, **kwargs):
+            node.remove_node()
+            self.set_emphasis(None)
+
+        @self.tree_conditional(lambda node: len(list(self.elems(emphasized=True))) > 1)
+        @self.tree_calc("ecount", lambda i: len(list(self.elems(emphasized=True))))
+        @self.tree_operation(
+            _("Remove: {ecount} objects"), node_type=("elem", "opnode"), help=""
+        )
+        def remove_n_objects(node, **kwargs):
+            self.context("element delete\n")
+
+        @self.tree_submenu(_("Clone Reference"))
+        @self.tree_iterate("copies", 1, 10)
+        @self.tree_operation(_("Make {copies} copies."), node_type="opnode", help="")
+        def clone_element_op(node, copies=1, **kwargs):
+            index = node.parent.children.index(node)
+            for i in range(copies):
+                node.parent.add(node.object, type="opnode", pos=index)
+            node.modified()
+            self.context.signal("rebuild_tree", 0)
+
+        @self.tree_conditional(lambda node: node.count_children() > 1)
+        @self.tree_operation(
+            _("Reverse Layer Order"),
+            node_type=("op", "branch elems", "branch ops"),
+            help="reverse the items within this subitem",
+        )
+        def reverse_layer_order(node, **kwargs):
+            node.reverse()
+            self.context.signal("rebuild_tree", 0)
+
+        @self.tree_operation(
+            _("Refresh Classification"), node_type="branch ops", help=""
+        )
+        def refresh_clasifications(node, **kwargs):
+            context = self.context
+            elements = context.elements
+            elements.remove_elements_from_operations(list(elements.elems()))
+            elements.classify(list(elements.elems()))
+            self.context.signal("rebuild_tree", 0)
+
+        @self.tree_operation(
+            _("Set Other/Blue/Red Classify"), node_type="branch ops", help=""
+        )
+        def default_classifications(node, **kwargs):
+            self.context.elements.load_default()
+
+        @self.tree_operation(
+            _("Set Basic Classification"), node_type="branch ops", help=""
+        )
+        def basic_classifications(node, **kwargs):
+            self.context.elements.load_default2()
+
+        @self.tree_operation(_("Add Operation"), node_type="branch ops", help="")
+        def add_operation_operation(node, **kwargs):
+            self.context.elements.add_op(LaserOperation())
+
+        @self.tree_submenu(_("Special Operations"))
+        @self.tree_operation(_("Add Home"), node_type="branch ops", help="")
+        def add_operation_home(node, **kwargs):
+            self.context.elements.add_op(CommandOperation("Home", COMMAND_HOME))
+
+        @self.tree_submenu(_("Special Operations"))
+        @self.tree_operation(_("Add Beep"), node_type="branch ops", help="")
+        def add_operation_beep(node, **kwargs):
+            self.context.elements.add_op(CommandOperation("Beep", COMMAND_BEEP))
+
+        @self.tree_submenu(_("Special Operations"))
+        @self.tree_operation(_("Add Move Origin"), node_type="branch ops", help="")
+        def add_operation_origin(node, **kwargs):
+            self.context.elements.add_op(CommandOperation("Origin", COMMAND_MOVE, 0, 0))
+
+        @self.tree_submenu(_("Special Operations"))
+        @self.tree_operation(_("Add Interrupt"), node_type="branch ops", help="")
+        def add_operation_interrupt(node, **kwargs):
+            self.context.elements.add_op(
+                CommandOperation(
+                    "Interrupt",
+                    COMMAND_FUNCTION,
+                    self.context.console_function("interrupt\n"),
+                )
+            )
+
+        @self.tree_submenu(_("Special Operations"))
+        @self.tree_operation(_("Add Shutdown"), node_type="branch ops", help="")
+        def add_operation_shutdown(node, **kwargs):
+            self.context.elements.add_op(
+                CommandOperation(
+                    "Shutdown",
+                    COMMAND_FUNCTION,
+                    self.context.console_function("quit\n"),
+                )
+            )
+
+        @self.tree_operation(
+            _("Reclassify Operations"), node_type="branch elems", help=""
+        )
+        def reclassify_operations(node, **kwargs):
+            context = self.context
+            elements = context.elements
+            elems = list(elements.elems())
+            elements.remove_elements_from_operations(elems)
+            elements.classify(list(elements.elems()))
+            self.context.signal("rebuild_tree", 0)
+
+        @self.tree_submenu(_("Convert Operation"))
+        @self.tree_operation(_("Convert Raster"), node_type="op", help="")
+        def convert_operation_raster(node, **kwargs):
+            node.operation = "Raster"
+
+        @self.tree_submenu(_("Convert Operation"))
+        @self.tree_operation(_("Convert Engrave"), node_type="op", help="")
+        def convert_operation_engrave(node, **kwargs):
+            node.operation = "Engrave"
+
+        @self.tree_submenu(_("Convert Operation"))
+        @self.tree_operation(_("Convert Cut"), node_type="op", help="")
+        def convert_operation_cut(node, **kwargs):
+            node.operation = "Cut"
+
+        @self.tree_submenu(_("Convert Operation"))
+        @self.tree_operation(_("Convert Image"), node_type="op", help="")
+        def convert_operation_image(node, **kwargs):
+            node.operation = "Image"
+
+        @self.tree_operation(
+            _("Duplicate Operation"),
+            node_type="op",
+            help="duplicate operation element nodes",
+        )
+        def duplicate_operation(node, **kwargs):
+            op = LaserOperation(node)
+            self.context.elements.add_op(op)
+            for e in node.children:
+                op.add(e.object, type="opnode")
+
+        @self.tree_conditional(lambda node: node.count_children() > 1)
+        @self.tree_conditional(lambda node: node.operation in ("Image", "Engrave", "Cut"))
+        @self.tree_submenu(_("Passes"))
+        @self.tree_iterate("copies", 1, 10)
+        @self.tree_operation(_("Add {copies} pass(es)."), node_type="op", help="")
+        def add_n_passes(node, copies=1, **kwargs):
+            add_elements = [
+                child.object for child in node.children if child.object is not None
+            ]
+            removed = False
+            for i in range(0, len(add_elements)):
+                for q in range(0, i):
+                    if add_elements[q] is add_elements[i]:
+                        add_elements[i] = None
+                        removed = True
+            if removed:
+                add_elements = [c for c in add_elements if c is not None]
+            add_elements *= copies
+            node.add_all(add_elements, type="opnode")
+            self.context.signal("rebuild_tree", 0)
+
+        @self.tree_conditional(lambda node: node.count_children() > 1)
+        @self.tree_conditional(lambda node: node.operation in ("Image", "Engrave", "Cut"))
+        @self.tree_submenu(_("Duplicate"))
+        @self.tree_iterate("copies", 1, 10)
+        @self.tree_operation(
+            _("Duplicate elements {copies} time(s)."), node_type="op", help=""
+        )
+        def dup_n_copies(node, copies=1, **kwargs):
+            add_elements = [
+                child.object for child in node.children if child.object is not None
+            ]
+            add_elements *= copies
+            node.add_all(add_elements, type="opnode")
+            self.context.signal("rebuild_tree", 0)
+
+        def radio_match(node, passvalue=1, **kwargs):
+            return node.settings.passes == passvalue
+
+        @self.tree_submenu(_("Set Operation Passes"))
+        @self.tree_radio(radio_match)
+        @self.tree_iterate("passvalue", 1, 10)
+        @self.tree_operation(_("Passes={passvalue}"), node_type="op", help="")
+        def set_n_passes(node, passvalue=1, **kwargs):
+            node.settings.passes = passvalue
+            node.settings.passes_custom = passvalue != 1
+            self.context.signal("element_property_update", node)
+
+        @self.tree_conditional(lambda node: node.operation in ("Raster", "Image"))
+        @self.tree_submenu(_("Step"))
+        @self.tree_iterate("i", 1, 10)
+        @self.tree_operation(
+            _("Step {iterator}"),
+            node_type="op",
+            help="Change raster step values of operation",
+        )
+        def set_step_n(node, i=1, **kwargs):
+            element = node.object
+            element.raster_step = i
+            self.context.signal("element_property_update", node.object)
+
+
+        @self.tree_conditional(lambda node: node.operation in ("Raster", "Image"))
+        @self.tree_operation(
+            _("Make Raster Image"),
+            node_type="op",
+            help="Convert a vector element into a raster element.",
+        )
+        def make_raster_image(node, **kwargs):
+            context = self.context
+            elements = context.elements
+            subitems = list(node.flat(types=("elem", "opnode")))
+            make_raster = self.context.registered.get("render-op/make_raster")
+            bounds = Group.union_bbox([s.object for s in subitems])
+            if bounds is None:
+                return
+            step = float(node.settings.raster_step)
+            if step == 0:
+                step = 1.0
+            xmin, ymin, xmax, ymax = bounds
+
+            image = make_raster(
+                subitems,
+                bounds,
+                width=(xmax - xmin),
+                height=(ymax - ymin),
+                step=step,
+            )
+            image_element = SVGImage(image=image)
+            image_element.transform.post_scale(step, step)
+            image_element.transform.post_translate(xmin, ymin)
+            image_element.values["raster_step"] = step
+            elements.add_elem(image_element)
+
+        @self.tree_operation(_("Reload {name}"), node_type="file", help="")
+        def reload_file(node, **kwargs):
+            filepath = node.filepath
+            self.clear_elements_and_operations()
+            self.load(filepath)
+
+        @self.tree_submenu(_("Duplicate"))
+        @self.tree_iterate("copies", 1, 10)
+        @self.tree_operation(_("Make {copies} copies."), node_type="elem", help="")
+        def duplicate_n_element(node, copies, **kwargs):
+            context = self.context
+            elements = context.elements
+            adding_elements = [
+                copy(e) for e in list(self.elems(emphasized=True)) * copies
+            ]
+            elements.add_elems(adding_elements)
+            elements.classify(adding_elements)
+            elements.set_emphasis(None)
+
+        @self.tree_conditional(lambda node: isinstance(node.object, SVGElement))
+        @self.tree_conditional_try(lambda node: not node.object.lock)
+        @self.tree_operation(
+            _("Reset User Changes"), node_type=("branch elem", "elem"), help=""
+        )
+        def reset_user_changes(node, copies=1, **kwargs):
+            self.context("reset\n")
+
+        @self.tree_conditional(lambda node: isinstance(node.object, Shape) and not isinstance(node.object, Path))
+        @self.tree_operation(
+            _("Convert To Path"), node_type=("elem",), help=""
+        )
+        def reset_user_changes(node, copies=1, **kwargs):
+            node.object = abs(Path(node.object))
+            node.object.node = node
+            node.altered()
+
+        @self.tree_conditional(lambda node: isinstance(node.object, SVGElement))
+        @self.tree_conditional_try(lambda node: not node.object.lock)
+        @self.tree_submenu(_("Scale"))
+        @self.tree_iterate("scale", 1, 25)
+        @self.tree_calc("scale_percent", lambda i: "%0.f" % (600.0 / float(i)))
+        @self.tree_operation(
+            _("Scale {scale_percent}%"), node_type="elem", help="Scale Element"
+        )
+        def scale_elem_amount(node, scale, **kwargs):
+            scale = 6.0 / float(scale)
+            child_objects = Group()
+            child_objects.extend(node.objects_of_children(SVGElement))
+            bounds = child_objects.bbox()
+            if bounds is None:
+                return
+            center_x = (bounds[2] + bounds[0]) / 2.0
+            center_y = (bounds[3] + bounds[1]) / 2.0
+            self.context(
+                "scale %f %f %f %f\n" % (scale, scale, center_x, center_y)
+            )
+
+        @self.tree_conditional(lambda node: isinstance(node.object, SVGElement))
+        @self.tree_conditional_try(lambda node: not node.object.lock)
+        @self.tree_submenu(_("Rotate"))
+        @self.tree_values(
+            "i",
+            values=(
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                -2,
+                -3,
+                -4,
+                -5,
+                -6,
+                -7,
+                -8,
+                -9,
+                -10,
+                -11,
+                -12,
+                -13,
+            ),
+        )
+        @self.tree_calc(
+            "angle", lambda i: "%0.f" % Angle.turns(1.0 / float(i)).as_degrees
+        )
+        @self.tree_operation(_(u"Rotate turn/{i}, {angle}°"), node_type="elem", help="")
+        def rotate_elem_amount(node, i, **kwargs):
+            value = 1.0 / float(i)
+            child_objects = Group()
+            child_objects.extend(node.objects_of_children(SVGElement))
+            bounds = child_objects.bbox()
+            if bounds is None:
+                return
+            center_x = (bounds[2] + bounds[0]) / 2.0
+            center_y = (bounds[3] + bounds[1]) / 2.0
+            self.context("rotate %fturn %f %f\n" % (value, center_x, center_y))
+
+        @self.tree_conditional(lambda node: isinstance(node.object, SVGElement))
+        @self.tree_conditional_try(lambda node: not node.object.lock)
+        @self.tree_operation(_("Reify User Changes"), node_type="elem", help="")
+        def reify_elem_changes(node, **kwargs):
+            self.context("reify\n")
+
+        @self.tree_conditional(lambda node: isinstance(node.object, Path))
+        @self.tree_conditional_try(lambda node: not node.object.lock)
+        @self.tree_operation(_("Break Subpaths"), node_type="elem", help="")
+        def break_subpath_elem(node, **kwargs):
+            self.context("element subpath\n")
+
+        def radio_match(node, i=0, **kwargs):
+            if "raster_step" in node.object.values:
+                step = float(node.object.values["raster_step"])
+            else:
+                step = 1.0
+            if i == step:
+                m = node.object.transform
+                if m.a == step or m.b == 0.0 or m.c == 0.0 or m.d == step:
+                    return True
+            return False
+
+        @self.tree_conditional(lambda node: isinstance(node.object, SVGImage))
+        @self.tree_submenu(_("Step"))
+        @self.tree_radio(radio_match)
+        @self.tree_iterate("i", 1, 10)
+        @self.tree_operation(_("Step {i}"), node_type="elem", help="")
+        def set_step_n_elem(node, i=1, **kwargs):
+            step_value = i
+            element = node.object
+            element.values["raster_step"] = str(step_value)
+            m = element.transform
+            tx = m.e
+            ty = m.f
+            element.transform = Matrix.scale(float(step_value), float(step_value))
+            element.transform.post_translate(tx, ty)
+            if hasattr(element, 'node'):
+                     element.node.modified()
+            self.context.signal("element_property_update", node.object)
+            self.context.gui.request_refresh()
+
+        @self.tree_conditional(lambda node: isinstance(node.object, SVGImage))
+        @self.tree_conditional_try(lambda node: not node.object.lock)
+        @self.tree_operation(_("Actualize Pixels"), node_type="elem", help="")
+        def image_actualize_pixels(node, **kwargs):
+            self.context("image resample\n")
+
+        @self.tree_conditional(lambda node: isinstance(node.object, SVGImage))
+        @self.tree_submenu(_("ZDepth Divide"))
+        @self.tree_iterate("divide", 2, 10)
+        @self.tree_operation(
+            _("Divide Into {divide} Images"), node_type="elem", help=""
+        )
+        def image_zdepth(node, divide=1, **kwargs):
+            element = node.object
+            if not isinstance(element, SVGImage):
+                return
+            if element.image.mode != "RGBA":
+                element.image = element.image.convert("RGBA")
+            band = 255 / divide
+            for i in range(0, divide):
+                threshold_min = i * band
+                threshold_max = threshold_min + band
+                self.context(
+                    "image threshold %f %f\n" % (threshold_min, threshold_max)
+                )
+
+        @self.tree_conditional(lambda node: isinstance(node.object, SVGImage))
+        @self.tree_conditional_try(lambda node: node.object.lock)
+        @self.tree_submenu(_("Image"))
+        @self.tree_operation(_("Unlock Manipulations"), node_type="elem", help="")
+        def image_unlock_manipulations(node, **kwargs):
+            self.context("image unlock\n")
+
+        @self.tree_conditional(lambda node: isinstance(node.object, SVGImage))
+        @self.tree_conditional_try(lambda node: not node.object.lock)
+        @self.tree_submenu(_("Image"))
+        @self.tree_operation(_("Dither to 1 bit"), node_type="elem", help="")
+        def image_dither(node, **kwargs):
+            self.context("image dither\n")
+
+        @self.tree_conditional(lambda node: isinstance(node.object, SVGImage))
+        @self.tree_conditional_try(lambda node: not node.object.lock)
+        @self.tree_submenu(_("Image"))
+        @self.tree_operation(_("Invert Image"), node_type="elem", help="")
+        def image_invert(node, **kwargs):
+            self.context("image invert\n")
+
+        @self.tree_conditional(lambda node: isinstance(node.object, SVGImage))
+        @self.tree_conditional_try(lambda node: not node.object.lock)
+        @self.tree_submenu(_("Image"))
+        @self.tree_operation(_("Mirror Horizontal"), node_type="elem", help="")
+        def image_mirror(node, **kwargs):
+            context("image mirror\n")
+
+        @self.tree_conditional(lambda node: isinstance(node.object, SVGImage))
+        @self.tree_conditional_try(lambda node: not node.object.lock)
+        @self.tree_submenu(_("Image"))
+        @self.tree_operation(_("Flip Vertical"), node_type="elem", help="")
+        def image_flip(node, **kwargs):
+            self.context("image flip\n")
+
+        @self.tree_conditional(lambda node: isinstance(node.object, SVGImage))
+        @self.tree_conditional_try(lambda node: not node.object.lock)
+        @self.tree_submenu(_("Image"))
+        @self.tree_operation(_("Rotate CW"), node_type="elem", help="")
+        def image_cw(node, **kwargs):
+            self.context("image cw\n")
+
+        @self.tree_conditional(lambda node: isinstance(node.object, SVGImage))
+        @self.tree_conditional_try(lambda node: not node.object.lock)
+        @self.tree_submenu(_("Image"))
+        @self.tree_operation(_("Rotate CCW"), node_type="elem", help="")
+        def image_ccw(node, **kwargs):
+            self.context("image ccw\n")
+
+        @self.tree_conditional(lambda node: isinstance(node.object, SVGImage))
+        @self.tree_conditional_try(lambda node: not node.object.lock)
+        @self.tree_submenu(_("Image"))
+        @self.tree_operation(_("Save output.png"), node_type="elem", help="")
+        def image_save(node, **kwargs):
+            self.context("image save output.png\n")
+
+        @self.tree_conditional(lambda node: isinstance(node.object, SVGImage))
+        @self.tree_submenu(_("RasterWizard"))
+        @self.tree_values("script", values=self.context.match("raster_script", suffix=True))
+        @self.tree_operation(_("RasterWizard: {script}"), node_type="elem", help="")
+        def image_rasterwizard_open(node, script=None, **kwargs):
+            self.context("window open -p / RasterWizard %s\n" % script)
+
+        @self.tree_conditional(lambda node: isinstance(node.object, SVGImage))
+        @self.tree_submenu(_("Apply Raster Script"))
+        @self.tree_values("script", values=self.context.match("raster_script", suffix=True))
+        @self.tree_operation(_("Apply: {script}"), node_type="elem", help="")
+        def image_rasterwizard_apply(node, script=None, **kwargs):
+            self.context("image wizard %s\n" % script)
+
+        @self.tree_conditional_try(lambda node: hasattr(node.object, "as_elements"))
+        @self.tree_operation(_("Convert to SVG"), node_type="elem", help="")
+        def cutcode_convert_svg(node, **kwargs):
+            self.context.elements.add_elems(node.object.as_elements())
+
+        @self.tree_conditional_try(lambda node: hasattr(node.object, "generate"))
+        @self.tree_operation(_("Process as Operation"), node_type="elem", help="")
+        def cutcode_operation(node, **kwargs):
+            self.context.elements.add_op(node.object)
+
+        @self.tree_operation(
+            _("Expand All Children"),
+            node_type=("op", "branch elems", "branch ops", "group", "file", "root"),
+            help="Expand all children of this given node.",
+        )
+        def expand_all_children(node, **kwargs):
+            node.notify_expand()
+
+        self.listen(self)
 
     def detach(self, *a, **kwargs):
         context = self.context
@@ -2294,6 +3448,7 @@ class Elemental(Modifier):
                         value = value.value
                     op_set.write_persistent(key, value)
         settings.close_subpaths()
+        self.unlisten(self)
 
     def boot(self, *a, **kwargs):
         self.context.setting(bool, "operation_default_empty", True)
@@ -2314,7 +3469,14 @@ class Elemental(Modifier):
             self.load_default()
             return
         self.add_ops([o for o in ops if o is not None])
-        self.context.signal("rebuild_tree")
+
+    def emphasized(self, *args):
+        self._emphasized_bounds_dirty = True
+        self._emphasized_bounds = None
+
+    def modified(self, *args):
+        self._emphasized_bounds_dirty = True
+        self._emphasized_bounds = None
 
     def listen(self, listener):
         self._tree.listen(listener)
@@ -2322,7 +3484,7 @@ class Elemental(Modifier):
     def unlisten(self, listener):
         self._tree.unlisten(listener)
 
-    def add_element(self, element):
+    def add_element(self, element, stroke="black"):
         if (
             not isinstance(element, SVGText)
             and hasattr(element, "__len__")
@@ -2331,9 +3493,9 @@ class Elemental(Modifier):
             return  # No empty elements.
         context_root = self.context.get_context("/")
         if hasattr(element, "stroke") and element.stroke is None:
-            element.stroke = Color("black")
+            element.stroke = Color(stroke)
         node = context_root.elements.add_elem(element)
-        context_root.elements.set_selected([element])
+        context_root.elements.set_emphasis([element])
         return node
 
     def load_default(self):
@@ -2370,69 +3532,29 @@ class Elemental(Modifier):
         self.add_op(LaserOperation(operation="Engrave", color="cyan", speed=35.0))
         self.add_op(LaserOperation(operation="Engrave", color="yellow", speed=35.0))
         self.add_op(LaserOperation(operation="Cut", color="red", speed=10.0))
-        self.classify(self.elems())
+        self.classify(list(self.elems()))
 
-    def items(self, **kwargs):
-        def combined(*args):
-            for listv in args:
-                for itemv in listv:
-                    yield itemv
+    @property
+    def op_branch(self):
+        return self._tree.get(type="branch ops")
 
-        for j in combined(self.ops(**kwargs), self.elems(**kwargs)):
-            yield j
-
-    def _filtered_list(self, item_list, **kwargs):
-        """
-        Filters a list of items with selected, emphasized, and highlighted.
-        False values means find where that parameter is false.
-        True values means find where that parameter is true.
-        If the filter does not exist then it isn't used to filter that data.
-
-        Items which are set to None are skipped.
-
-        :param item_list:
-        :param kwargs:
-        :return:
-        """
-        s = "selected" in kwargs
-        if s:
-            s = kwargs["selected"]
-        else:
-            s = None
-        e = "emphasized" in kwargs
-        if e:
-            e = kwargs["emphasized"]
-        else:
-            e = None
-        h = "highlighted" in kwargs
-        if h:
-            h = kwargs["highlighted"]
-        else:
-            h = None
-        for obj in item_list.children:
-            if obj is None:
-                continue
-            if s is not None and s != obj.selected:
-                continue
-            if e is not None and e != obj.emphasized:
-                continue
-            if h is not None and s != obj.highlighted:
-                continue
-            yield obj
+    @property
+    def elem_branch(self):
+        return self._tree.get(type="branch elems")
 
     def ops(self, **kwargs):
-        operations = self._tree.get_branch(NODE_OPERATION_BRANCH)
-        for item in self._filtered_list(operations, **kwargs):
+        operations = self._tree.get(type="branch ops")
+        for item in operations.flat(types=("op",), depth=1, **kwargs):
             yield item
 
     def elems(self, **kwargs):
-        elements = self._tree.get_branch(NODE_ELEMENTS_BRANCH)
-        for item in self._filtered_list(elements, **kwargs):
+        elements = self._tree.get(type="branch elems")
+        for item in elements.flat(types=("elem",), **kwargs):
             yield item.object
 
-    def elems_nodes(self, **kwargs):
-        elements = self._tree.get_branch(NODE_ELEMENTS_BRANCH)
-        for item in self._filtered_list(elements, **kwargs):
+    def elems_nodes(self, depth=None, **kwargs):
+        elements = self._tree.get(type="branch elems")
+        for item in elements.flat(types=("elem", "file", "group"), depth=depth, **kwargs):
             yield item
 
     def first_element(self, **kwargs):
@@ -2441,13 +3563,18 @@ class Elemental(Modifier):
         return None
 
     def has_emphasis(self):
-        return self.first_element(emphasized=True) is not None
+        for e in self.elems_nodes(emphasized=True):
+            return True
+        return False
 
     def count_elems(self, **kwargs):
         return len(list(self.elems(**kwargs)))
 
     def count_op(self, **kwargs):
         return len(list(self.ops(**kwargs)))
+
+    def get(self, obj=None, type=None):
+        return self._tree.get(obj=obj, type=type)
 
     def get_op(self, index, **kwargs):
         for i, op in enumerate(self.ops(**kwargs)):
@@ -2468,42 +3595,47 @@ class Elemental(Modifier):
         raise IndexError
 
     def add_op(self, op):
-        operation_branch = self._tree.get_branch(NODE_OPERATION_BRANCH)
+        operation_branch = self._tree.get(type="branch ops")
         op.set_name(str(op))
-        op.type = NODE_OPERATION_BRANCH + 1
-        operation_branch.attach(op)
+        operation_branch.add(op, type="op")
 
     def add_ops(self, adding_ops):
-        operation_branch = self._tree.get_branch(NODE_OPERATION_BRANCH)
+        operation_branch = self._tree.get(type="branch ops")
         items = []
         for op in adding_ops:
             op.set_name(str(op))
-            op.type = NODE_OPERATION_BRANCH + 1
-            operation_branch.attach(op)
+            operation_branch.add(op, type="op")
             items.append(op)
         return items
 
     def add_elem(self, element):
-        element_branch = self._tree.get_branch(NODE_ELEMENTS_BRANCH)
-        node = element_branch.add_node(element, node_type=NODE_ELEMENTS_BRANCH + 1)
+        """
+        Add an element. Wraps it within a node, and appends it to the tree.
+
+        :param element:
+        :return:
+        """
+        element_branch = self._tree.get(type="branch elems")
+        node = element_branch.add(element, type="elem")
         self.context.signal("element_added", element)
         return node
 
     def add_elems(self, adding_elements):
-        element_branch = self._tree.get_branch(NODE_ELEMENTS_BRANCH)
+        element_branch = self._tree.get(type="branch elems")
         items = []
         for element in adding_elements:
-            items.append(element_branch.add_node(element, node_type=NODE_ELEMENTS_BRANCH + 1))
+            items.append(element_branch.add(element, type="elem"))
         self.context.signal("element_added", adding_elements)
         return items
 
     def clear_operations(self):
-        for op in self.ops():
+        operations = self._tree.get(type="branch ops")
+        for op in reversed(list(operations.flat(types=("op", "opnode")))):
             if op is not None:
                 op.remove_node()
 
     def clear_elements(self):
-        for e in list(self.elems_nodes()):
+        for e in reversed(list(self.elems_nodes())):
             if e is not None:
                 e.remove_node()
 
@@ -2519,18 +3651,18 @@ class Elemental(Modifier):
         self.clear_operations()
         self.clear_files()
         self.clear_note()
-        self.validate_bounds()
+        self.validate_selected_area()
 
     def clear_note(self):
         self.note = None
 
     def remove_elements(self, elements_list):
         for elem in elements_list:
-            for i, e in enumerate(self.elems_nodes()):
-                if elem is e.object:
-                    e.remove_node()
+            for i, e in enumerate(self.elems()):
+                if elem is e:
+                    e.node.remove_node()
         self.remove_elements_from_operations(elements_list)
-        self.validate_bounds()
+        self.validate_selected_area()
 
     def remove_operations(self, operations_list):
         for op in operations_list:
@@ -2541,36 +3673,37 @@ class Elemental(Modifier):
 
     def remove_elements_from_operations(self, elements_list):
         for i, op in enumerate(self.ops()):
-            for e in op.children:
+            for e in list(op.children):
+                if e.object in elements_list:
+                    e.remove_node()
+
+    def remove_orphaned_opnodes(self):
+        """
+        Remove any opnodes whose objects do not appear in the elem list.
+
+        :return:
+        """
+        elements_list = list(self.elems())
+        for i, op in enumerate(self.ops()):
+            for e in list(op.children):
                 if e.object not in elements_list:
                     e.remove_node()
 
-    def bounds(self):
-        return self._bounds
+    def selected_area(self):
+        if self._emphasized_bounds_dirty:
+            self.validate_selected_area()
+        return self._emphasized_bounds
 
-    def validate_bounds(self):
+    def validate_selected_area(self):
         boundary_points = []
-        for e in self.elems_nodes():
-            if (
-                e.last_transform is None
-                or e.last_transform != e.transform
-                or e.bounds is None
-            ):
-                try:
-                    e.bounds = e.bbox(False)
-                except AttributeError:
-                    # Type does not have bbox.
-                    continue
-                e.last_transform = copy(e.transform)
+        for e in self.elems_nodes(emphasized=True):
             if e.bounds is None:
                 continue
-            if not e.emphasized:
-                continue
             box = e.bounds
-            top_left = e.transform.point_in_matrix_space([box[0], box[1]])
-            top_right = e.transform.point_in_matrix_space([box[2], box[1]])
-            bottom_left = e.transform.point_in_matrix_space([box[0], box[3]])
-            bottom_right = e.transform.point_in_matrix_space([box[2], box[3]])
+            top_left = [box[0], box[1]]
+            top_right = [box[2], box[1]]
+            bottom_left = [box[0], box[3]]
+            bottom_right = [box[2], box[3]]
             boundary_points.append(top_left)
             boundary_points.append(top_right)
             boundary_points.append(bottom_left)
@@ -2584,118 +3717,91 @@ class Elemental(Modifier):
             xmax = max([e[0] for e in boundary_points])
             ymax = max([e[1] for e in boundary_points])
             new_bounds = [xmin, ymin, xmax, ymax]
-        if self._bounds != new_bounds:
-            self._bounds = new_bounds
-            self.context.signal("selected_bounds", self._bounds)
+        self._emphasized_bounds_dirty = False
+        if self._emphasized_bounds != new_bounds:
+            self._emphasized_bounds = new_bounds
+            self.context.signal("selected_bounds", self._emphasized_bounds)
 
-    def is_in_set(self, v, selected, flat=True):
-        for q in selected:
-            if flat and isinstance(q, (list, tuple)) and self.is_in_set(v, q, flat):
-                return True
-            if q is v:
-                return True
-        return False
-
-    def set_selected(self, selected):
+    def highlight_children(self, node_context):
         """
-        Sets selected and other properties of a given element.
+        Recursively highlight the children.
+        :param node_context:
+        :return:
+        """
+        for child in node_context.children:
+            child.highlighted = True
+            self.highlight_children(child)
 
-        All selected elements are also semi-selected.
+    def target_clones(self, node_context, node_exclude, object_search):
+        """
+        Recursively highlight the children.
+        :param node_context:
+        :return:
+        """
+        for child in node_context.children:
+            self.target_clones(child, node_exclude, object_search)
+            if child is node_exclude:
+                continue
+            if child.object is None:
+                continue
+            if object_search is child.object:
+                child.targeted = True
 
-        If elements itself is selected, all subelements are semiselected.
-
+    def set_emphasis(self, emphasize):
+        """
         If any operation is selected, all sub-operations are highlighted.
-
+        If any element is emphasized, all copies are highlighted.
+        If any element is emphasized, all operations containing that element are targeted.
         """
-        if selected is None:
-            selected = []
-        for s in self.elems_nodes():
-            should_select = self.is_in_set(s, selected, False)
-            should_emphasize = self.is_in_set(s, selected)
+        for s in self._tree.flat():
+            if s.highlighted:
+                s.highlighted = False
+            if s.targeted:
+                s.targeted = False
+
             if s.emphasized:
-                if not should_emphasize:
+                if emphasize is None or s not in emphasize:
                     s.emphasized = False
             else:
-                if should_emphasize:
+                if emphasize is not None and (
+                    s in emphasize or (hasattr(s, "object") and s.object in emphasize)
+                ):
                     s.emphasized = True
-            if s.selected:
-                if not should_select:
-                    s.selected = False
-            else:
-                if should_select:
-                    s.selected = True
-        for s in self.ops():
-            should_select = self.is_in_set(s, selected, False)
-            should_emphasize = self.is_in_set(s, selected)
-            if s.emphasized:
-                if not should_emphasize:
-                    s.emphasized = False
-            else:
-                if should_emphasize:
-                    s.emphasized = True
-            if s.selected:
-                if not should_select:
-                    s.selected = False
-            else:
-                if should_select:
-                    s.selected = True
+        if emphasize is not None:
+            for e in emphasize:
+                e.emphasized = True
+                if hasattr(e, "object"):
+                    self.target_clones(self._tree, e, e.object)
+                if hasattr(e, "node"):
+                    e = e.node
+                self.highlight_children(e)
 
     def center(self):
-        bounds = self._bounds
+        bounds = self._emphasized_bounds
         return (bounds[2] + bounds[0]) / 2.0, (bounds[3] + bounds[1]) / 2.0
 
     def ensure_positive_bounds(self):
-        b = self._bounds
-        self._bounds = [
+        b = self._emphasized_bounds
+        if b is None:
+            return
+        self._emphasized_bounds = [
             min(b[0], b[2]),
             min(b[1], b[3]),
             max(b[0], b[2]),
             max(b[1], b[3]),
         ]
-        self.context.signal("selected_bounds", self._bounds)
+        self.context.signal("selected_bounds", self._emphasized_bounds)
 
     def update_bounds(self, b):
-        self._bounds = [b[0], b[1], b[0], b[1]]
-        self.context.signal("selected_bounds", self._bounds)
+        self._emphasized_bounds = [b[0], b[1], b[2], b[3]]
+        self.context.signal("selected_bounds", self._emphasized_bounds)
 
-    @staticmethod
-    def bounding_box(elements):
-        if isinstance(elements, SVGElement):
-            elements = [elements]
-        elif isinstance(elements, list):
-            try:
-                elements = [
-                    e.object for e in elements if isinstance(e.object, SVGElement)
-                ]
-            except AttributeError:
-                pass
-        boundary_points = []
-        for e in elements:
-            box = e.bbox(False)
-            if box is None:
-                continue
-            top_left = e.transform.point_in_matrix_space([box[0], box[1]])
-            top_right = e.transform.point_in_matrix_space([box[2], box[1]])
-            bottom_left = e.transform.point_in_matrix_space([box[0], box[3]])
-            bottom_right = e.transform.point_in_matrix_space([box[2], box[3]])
-            boundary_points.append(top_left)
-            boundary_points.append(top_right)
-            boundary_points.append(bottom_left)
-            boundary_points.append(bottom_right)
-        if len(boundary_points) == 0:
-            return None
-        xmin = min([e[0] for e in boundary_points])
-        ymin = min([e[1] for e in boundary_points])
-        xmax = max([e[0] for e in boundary_points])
-        ymax = max([e[1] for e in boundary_points])
-        return xmin, ymin, xmax, ymax
-
-    def move_selected(self, dx, dy):
+    def move_emphasized(self, dx, dy):
         for obj in self.elems(emphasized=True):
             obj.transform.post_translate(dx, dy)
-            obj.modified()
+            obj.node.modified()
 
-    def set_selected_by_position(self, position):
+    def set_emphasized_by_position(self, position):
         def contains(box, x, y=None):
             if y is None:
                 y = x[1]
@@ -2703,80 +3809,98 @@ class Elemental(Modifier):
             return box[0] <= x <= box[2] and box[1] <= y <= box[3]
 
         if self.has_emphasis():
-            if self._bounds is not None and contains(self._bounds, position):
+            if self._emphasized_bounds is not None and contains(
+                self._emphasized_bounds, position
+            ):
                 return  # Select by position aborted since selection position within current select bounds.
-        for e in reversed(list(self.elems())):
+        for e in self.elems_nodes(depth=1, cascade=False):
             try:
-                bounds = e.bbox()
+                bounds = e.bounds
             except AttributeError:
                 continue  # No bounds.
             if bounds is None:
                 continue
             if contains(bounds, position):
-                self.set_selected([e])
+                e_list = [e]
+                self._emphasized_bounds = bounds
+                self.set_emphasis(e_list)
                 return
-        self.set_selected(None)
+        self._emphasized_bounds = None
+        self.set_emphasis(None)
 
-    def classify(self, elements, items=None, add_funct=None):
+    def classify(self, elements, operations=None, add_op_function=None):
         """
-        Classify does the initial placement of elements as operations.
+        Classify does the placement of elements within operations.
+
         "Image" is the default for images.
+
+        Typically,
         If element strokes are red they get classed as cut operations
         If they are otherwise they get classed as engrave.
+        However, this differs based on the ops in question.
+
+        :param elements: list of elements to classify.
+        :param operations: operations list to classify into.
+        :param add_op_function: function to add a new operation, because of a lack of classification options.
+        :return:
         """
-        if items is None:
-            items = list(self.ops())
-        if add_funct is None:
-            add_funct = self.add_op
+
         if elements is None:
             return
-        if not isinstance(elements, list):
-            elements = [elements]
+        if operations is None:
+            operations = list(self.ops())
+        if add_op_function is None:
+            add_op_function = self.add_op
         for element in elements:
             was_classified = False
             image_added = False
             if hasattr(element, "operation"):
-                add_funct(element)
+                add_op_function(element)
                 continue
-            for op in items:
+            if element is None:
+                continue
+            for op in operations:
                 if op.operation == "Raster":
                     if image_added:
-                        continue  # already added to an image operation, is not added her.
+                        continue  # already added to an image operation, is not added here.
                     if element.stroke is not None and op.color == abs(element.stroke):
-                        op.add_node(element)
+                        op.add(element, type="opnode")
                         was_classified = True
                     elif isinstance(element, SVGImage):
-                        op.add_node(element)
+                        op.add(element, type="opnode")
                         was_classified = True
                     elif element.fill is not None and element.fill.value is not None:
-                        op.add_node(element)
+                        op.add(element, type="opnode")
                         was_classified = True
                 elif (
                     op.operation in ("Engrave", "Cut")
                     and element.stroke is not None
                     and op.color == abs(element.stroke)
                 ):
-                    op.add_node(element)
+                    op.add(element, type="opnode")
                     was_classified = True
                 elif op.operation == "Image" and isinstance(element, SVGImage):
-                    op.add_node(element)
+                    op.add(element, type="opnode")
                     was_classified = True
                     image_added = True
+                elif isinstance(element, SVGText):
+                    op.add(element)
+                    was_classified = True
             if not was_classified:
                 if element.stroke is not None and element.stroke.value is not None:
                     op = LaserOperation(
                         operation="Engrave", color=element.stroke, speed=35.0
                     )
-                    add_funct(op)
-                    op.add_node(element)
-                    items.append(op)
+                    add_op_function(op)
+                    op.add(element, type="opnode")
+                    operations.append(op)
 
     def load(self, pathname, **kwargs):
         kernel = self.context._kernel
         for loader_name in kernel.match("load"):
             loader = kernel.registered[loader_name]
             for description, extensions, mimetype in loader.load_types():
-                if pathname.lower().endswith(extensions):
+                if str(pathname).lower().endswith(extensions):
                     try:
                         results = loader.load(self.context, self, pathname, **kwargs)
                     except FileNotFoundError:

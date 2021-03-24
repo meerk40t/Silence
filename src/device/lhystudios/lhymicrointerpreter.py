@@ -1,22 +1,13 @@
-from ..lasercommandconstants import *
-from .laserspeed import LaserSpeed
-from ...kernel import Modifier
-from ..basedevice import (
-    Interpreter,
-    PLOT_FINISH,
-    PLOT_SETTING,
-    PLOT_AXIS,
-    PLOT_DIRECTION,
-    PLOT_RAPID,
-    PLOT_JOG,
-    INTERPRETER_STATE_PROGRAM,
-    INTERPRETER_STATE_RAPID,
-    INTERPRETER_STATE_FINISH,
-    INTERPRETER_STATE_MODECHANGE,
-)
 from ...core.plotplanner import PlotPlanner
 from ...core.zinglplotter import ZinglPlotter
-
+from ...kernel import Modifier
+from ..basedevice import (INTERPRETER_STATE_FINISH,
+                          INTERPRETER_STATE_MODECHANGE,
+                          INTERPRETER_STATE_PROGRAM, INTERPRETER_STATE_RAPID,
+                          PLOT_AXIS, PLOT_DIRECTION, PLOT_FINISH, PLOT_JOG,
+                          PLOT_RAPID, PLOT_SETTING, Interpreter)
+from ..lasercommandconstants import *
+from .laserspeed import LaserSpeed
 
 distance_lookup = [
     b"",
@@ -111,6 +102,7 @@ class LhymicroInterpreter(Interpreter, Modifier):
     def __init__(self, context, job_name=None, channel=None, *args, **kwargs):
         Modifier.__init__(self, context, job_name, channel)
         Interpreter.__init__(self, context=context)
+
         self.CODE_RIGHT = b"B"
         self.CODE_LEFT = b"T"
         self.CODE_TOP = b"L"
@@ -150,6 +142,7 @@ class LhymicroInterpreter(Interpreter, Modifier):
         context = self.context
         kernel = context._kernel
         _ = kernel.translation
+        root_context = context.get_context('/')
 
         @context.console_command(
             "pulse", help="pulse <time>: Pulse the laser in place."
@@ -247,14 +240,32 @@ class LhymicroInterpreter(Interpreter, Modifier):
                     channel(_("Invalid Acceleration [1-4]."))
                     return
 
-        @context.console_command(
-            "pause", help="realtime pause/resume of the machine"
-        )
+        @context.console_command("pause", help="realtime pause/resume of the machine")
         def realtime_pause(command, channel, _, args=tuple(), **kwargs):
             if self.is_paused:
                 self.resume()
             else:
                 self.pause()
+
+        @self.context.console_command("abort", help="Abort Job")
+        def pipe_abort(command, channel, _, args=tuple(), **kwargs):
+            self.reset()
+            channel("Lhystudios Channel Aborted.")
+
+        @self.context.console_argument("rapid_x", type=float, help="limit x speed for rapid.")
+        @self.context.console_argument("rapid_y", type=float, help="limit y speed for rapid.")
+        @self.context.console_command("rapid_override", help="limit speed of typical rapid moves.")
+        def rapid_override(command, channel, _, rapid_x=None, rapid_y=None, **kwargs):
+            if rapid_x is not None:
+                if rapid_y is None:
+                    rapid_y = rapid_x
+                self.rapid_override = True
+                self.rapid_override_speed_x = rapid_x
+                self.rapid_override_speed_y = rapid_y
+                channel(_("Rapid Limit: %f, %f") % (self.rapid_override_speed_x,self.rapid_override_speed_y))
+            else:
+                self.rapid_override = False
+                channel(_("Rapid Limit Off"))
 
         context.interpreter = self
 
@@ -270,9 +281,9 @@ class LhymicroInterpreter(Interpreter, Modifier):
         context.setting(bool, "buffer_limit", True)
         context.setting(int, "current_x", 0)
         context.setting(int, "current_y", 0)
-        context.setting(bool, "opt_rapid_between", True)
-        context.setting(int, "opt_jog_mode", 0)
-        context.setting(int, "opt_jog_minimum", 127)
+        root_context.setting(bool, "opt_rapid_between", True)
+        root_context.setting(int, "opt_jog_mode", 0)
+        root_context.setting(int, "opt_jog_minimum", 127)
 
         self.update_codes()
 
@@ -292,9 +303,7 @@ class LhymicroInterpreter(Interpreter, Modifier):
         context.register("control/Realtime Resume", self.resume)
         context.register("control/Update Codes", self.update_codes)
 
-        context.get_context("/").listen(
-            "lifecycle;ready", self.on_interpreter_ready
-        )
+        context.get_context("/").listen("lifecycle;ready", self.on_interpreter_ready)
 
     def detach(self, *args, **kwargs):
         self.context.get_context("/").unlisten(
@@ -400,7 +409,7 @@ class LhymicroInterpreter(Interpreter, Modifier):
                         self.move_absolute(x, y)
                         continue
                     # Jog is performable and requested. # We have not flagged our direction or state.
-                    self.jog_absolute(x, y, mode=self.context.opt_jog_mode)
+                    self.jog_absolute(x, y, mode=self.root_context.opt_jog_mode)
                     continue
                 else:
                     self.ensure_program_mode()
@@ -593,14 +602,30 @@ class LhymicroInterpreter(Interpreter, Modifier):
         dx = int(round(dx))
         dy = int(round(dy))
         if self.state == INTERPRETER_STATE_RAPID:
-            self.pipe(b"I")
-            if dx != 0:
-                self.goto_x(dx)
-            if dy != 0:
-                self.goto_y(dy)
-            self.pipe(b"S1P\n")
-            if not self.context.autolock:
-                self.pipe(b"IS2P\n")
+            if self.rapid_override and (dx != 0 or dy != 0):
+                self.set_acceleration(None)
+                self.set_step(0)
+                if dx != 0:
+                    self.ensure_rapid_mode()
+                    self.set_speed(self.rapid_override_speed_x)
+                    self.ensure_program_mode()
+                    self.goto_octent(dx, 0, cut)
+                if dy != 0:
+                    if self.rapid_override_speed_x != self.rapid_override_speed_y:
+                        self.ensure_rapid_mode()
+                        self.set_speed(self.rapid_override_speed_y)
+                        self.ensure_program_mode()
+                    self.goto_octent(0, dy, cut)
+                self.ensure_rapid_mode()
+            else:
+                self.pipe(b"I")
+                if dx != 0:
+                    self.goto_x(dx)
+                if dy != 0:
+                    self.goto_y(dy)
+                self.pipe(b"S1P\n")
+                if not self.context.autolock:
+                    self.pipe(b"IS2P\n")
         elif self.state == INTERPRETER_STATE_PROGRAM:
             mx = 0
             my = 0
@@ -828,13 +853,16 @@ class LhymicroInterpreter(Interpreter, Modifier):
     def calc_home_position(self):
         x = 0
         y = 0
+        bed_dim = self.context.get_context('/')
+        bed_dim.setting(int, "bed_width", 310)
+        bed_dim.setting(int, "bed_height", 210)
         if self.context.home_right:
-            x = int(self.context.bed_width * 39.3701)
+            x = int(bed_dim.bed_width * 39.3701)
         if self.context.home_bottom:
-            y = int(self.context.bed_height * 39.3701)
+            y = int(bed_dim.bed_height * 39.3701)
         return x, y
 
-    def home(self):
+    def home(self, *values):
         x, y = self.calc_home_position()
         self.ensure_rapid_mode()
         self.pipe(b"IPP\n")
@@ -842,11 +870,18 @@ class LhymicroInterpreter(Interpreter, Modifier):
         old_y = self.context.current_y
         self.context.current_x = x
         self.context.current_y = y
-        self.laser = False
-        self.properties = 0
+        self.reset_modes()
         self.state = INTERPRETER_STATE_RAPID
         adjust_x = self.context.home_adjust_x
         adjust_y = self.context.home_adjust_y
+        try:
+            adjust_x = int(values[0])
+        except (ValueError, IndexError):
+            pass
+        try:
+            adjust_y = int(values[1])
+        except (ValueError, IndexError):
+            pass
         if adjust_x != 0 or adjust_y != 0:
             # Perform post home adjustment.
             self.move_relative(adjust_x, adjust_y)
@@ -873,6 +908,10 @@ class LhymicroInterpreter(Interpreter, Modifier):
         self.min_y = min(self.min_y, self.context.current_y)
         self.max_x = max(self.max_x, self.context.current_x)
         self.max_y = max(self.max_y, self.context.current_y)
+
+    def reset_modes(self):
+        self.laser = False
+        self.properties = 0
 
     def goto_x(self, dx):
         if dx > 0:

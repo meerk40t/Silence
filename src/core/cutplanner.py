@@ -1,32 +1,15 @@
 from copy import copy
-from math import isnan, isinf, ceil
+from math import ceil, isinf, isnan
 
-from ..kernel import Modifier
 from ..core.cutcode import CutCode
-from .elements import LaserOperation
 from ..device.lasercommandconstants import (
-    COMMAND_WAIT_FINISH,
-    COMMAND_MODE_RAPID,
-    COMMAND_SET_ABSOLUTE,
-    COMMAND_MOVE,
-    COMMAND_HOME,
-    COMMAND_WAIT,
-    COMMAND_BEEP,
-    COMMAND_FUNCTION, COMMAND_UNLOCK,
-)
-from ..svgelements import (
-    Matrix,
-    Length,
-    Angle,
-    Path,
-    SVGText,
-    SVGImage,
-    SVGElement,
-    Polyline,
-    Move,
-    Point,
-    Polygon,
-)
+    COMMAND_BEEP, COMMAND_FUNCTION, COMMAND_HOME, COMMAND_MODE_RAPID,
+    COMMAND_MOVE, COMMAND_SET_ABSOLUTE, COMMAND_SET_POSITION, COMMAND_UNLOCK,
+    COMMAND_WAIT, COMMAND_WAIT_FINISH)
+from ..kernel import Modifier
+from ..svgelements import (Angle, Length, Matrix, Move, Path, Point, Polygon,
+                           Polyline, SVGElement, SVGImage, SVGText, Group)
+from .elements import LaserOperation
 
 
 def plugin(kernel, lifecycle=None):
@@ -65,12 +48,16 @@ class Planner(Modifier):
         kernel = self.context._kernel
         _ = kernel.translation
         elements = context.elements
-        self.context.setting(bool, "rotary", False)
-        self.context.setting(float, "scale_x", 1.0)
-        self.context.setting(float, "scale_y", 1.0)
+        rotary_context = self.context.get_context('rotary/1')
+        bed_dim = self.context.get_context('/')
+        rotary_context.setting(bool, "rotary", False)
+        rotary_context.setting(float, "scale_x", 1.0)
+        rotary_context.setting(float, "scale_y", 1.0)
         self.context.setting(bool, "prehome", False)
+        self.context.setting(bool, "prephysicalhome", False)
         self.context.setting(bool, "postunlock", False)
         self.context.setting(bool, "autohome", False)
+        self.context.setting(bool, "autophysicalhome", False)
         self.context.setting(bool, "autoorigin", False)
         self.context.setting(bool, "autobeep", True)
         self.context.setting(bool, "opt_reduce_travel", True)
@@ -105,7 +92,7 @@ class Planner(Modifier):
                     e = CutPlanner.optimize_cut_inside(element)
                     element.clear()
                     element += e
-                    element.altered()
+                    element.node.altered()
             elif args[0] == "travel":
                 channel(
                     _("Travel Optimizing: %f")
@@ -115,7 +102,7 @@ class Planner(Modifier):
                     e = CutPlanner.optimize_travel(element)
                     element.clear()
                     element += e
-                    element.altered()
+                    element.node.altered()
                 channel(
                     _("Optimized: %f")
                     % CutPlanner.length_travel(elements.elems(emphasized=True))
@@ -129,7 +116,7 @@ class Planner(Modifier):
                     e = CutPlanner.optimize_general(element)
                     element.clear()
                     element += e
-                    element.altered()
+                    element.node.altered()
                 channel(
                     _("Cut Travel Optimized: %f")
                     % CutPlanner.length_travel(elements.elems(emphasized=True))
@@ -149,7 +136,7 @@ class Planner(Modifier):
                 angle = None
             if len(args) >= 2:
                 distance = Length(args[1]).value(
-                    ppi=1000.0, relative_length=self.context.bed_height * 39.3701
+                    ppi=1000.0, relative_length=bed_dim.bed_height * 39.3701
                 )
             else:
                 distance = 16
@@ -164,12 +151,21 @@ class Planner(Modifier):
                 element += e
                 if angle is not None:
                     element *= Matrix.rotate(-angle)
-                element.altered()
+                element.node.altered()
 
-        @self.context.console_option("op", 'o', type=str,
-                                       help="unlock, origin, home")
-        @self.context.console_argument("subcommand", type=str, help="classify/copy/validate/blob/optimize/clear/list/spool")
-        @self.context.console_command("plan", help="plan<?> <command>", regex=True, input_type=(None, 'ops'), output_type='plan')
+        @self.context.console_option("op", "o", type=str, help="unlock, origin, home")
+        @self.context.console_argument(
+            "subcommand",
+            type=str,
+            help="classify/copy/validate/blob/optimize/clear/list/spool",
+        )
+        @self.context.console_command(
+            "plan",
+            help="plan<?> <command>",
+            regex=True,
+            input_type=(None, "ops"),
+            output_type="plan",
+        )
         def plan(command, channel, _, subcommand, op=None, args=tuple(), **kwargs):
             if len(command) > 4:
                 self._default_plan = command[4:]
@@ -202,6 +198,18 @@ class Planner(Modifier):
                     list(elements.elems(emphasized=True)), plan, plan.append
                 )
                 return
+            elif subcommand == "copy-selected":
+                for c in elements.ops(emphasized=True):
+                    if not c.output:
+                        continue
+                    try:
+                        if len(c) == 0:
+                            continue
+                    except TypeError:
+                        pass
+                    plan.append(copy(c))
+                channel(_("Copied Operations."))
+                self.context.signal("plan", self._default_plan, 1)
             elif subcommand == "copy":
                 for c in elements.ops():
                     if not c.output:
@@ -228,25 +236,36 @@ class Planner(Modifier):
                     channel(_("No plan command found."))
                 return
             elif subcommand == "preprocess":
+                rotary_context = self.context.get_context('rotary/1')
+                if self.context.prephysicalhome:
+                    if not rotary_context.rotary:
+                        plan.insert(0, self.context.registered["plan/physicalhome"])
+                    else:
+                        plan.insert(0, _("Physical Home Before: Disabled (Rotary On)"))
                 if self.context.prehome:
-                    if not self.context.rotary:
+                    if not rotary_context.rotary:
                         plan.insert(0, self.context.registered["plan/home"])
                     else:
                         plan.insert(0, _("Home Before: Disabled (Rotary On)"))
                 if self.context.autobeep:
                     plan.append(self.context.registered["plan/beep"])
                 if self.context.autohome:
-                    if not self.context.rotary:
+                    if not rotary_context.rotary:
                         plan.append(self.context.registered["plan/home"])
                     else:
                         plan.append(_("Home After: Disabled (Rotary On)"))
+                if self.context.autophysicalhome:
+                    if not rotary_context.rotary:
+                        plan.append(self.context.registered["plan/physicalhome"])
+                    else:
+                        plan.append(_("Physical Home After: Disabled (Rotary On)"))
                 if self.context.autoorigin:
                     plan.append(self.context.registered["plan/origin"])
                 if self.context.postunlock:
                     plan.append(self.context.registered["plan/unlock"])
                 # divide
                 self.conditional_jobadd_strip_text()
-                if self.context.rotary:
+                if rotary_context.rotary:
                     self.conditional_jobadd_scale_rotary()
                 self.conditional_jobadd_actualize_image()
                 self.conditional_jobadd_make_raster()
@@ -310,6 +329,40 @@ class Planner(Modifier):
                 channel(_("Spooled Plan."))
                 self.context.signal("plan", self._default_plan, 6)
                 return "plan", plan
+            elif subcommand == "step_repeat":
+                cols = args[1]
+                rows = args[2]
+                x_distance = args[3]
+                y_distance = args[4]
+                # TODO: IMPLEMENT!
+                # TODO: Implement the 0.6.19 switch changes.
+                self.operations.clear()
+                self.preprocessor.commands = list()
+                x_distance = int(x_distance)
+                y_distance = int(y_distance)
+                x_last = 0
+                y_last = 0
+                y_pos = 0
+                x_pos = 0
+                for j in range(rows):
+                    x_pos = 0
+                    for k in range(cols):
+                        x_offset = x_pos - x_last
+                        y_offset = y_pos - y_last
+                        self.operations.append(OperationPreprocessor.origin)
+                        if x_offset != 0 or y_offset != 0:
+                            self.operations.append(
+                                OperationPreprocessor.offset(x_offset, y_offset)
+                            )
+                        self.operations.extend(list(self._original_ops))
+                        x_last = x_pos
+                        y_last = y_pos
+                        x_pos += x_distance
+                    y_pos += y_distance
+                if x_pos != 0 or y_pos != 0:
+                    self.operations.append(OperationPreprocessor.offset(-x_pos, -y_pos))
+                self.refresh_lists()
+                self.update_gui()
             else:
                 channel(_("Unrecognized command."))
 
@@ -373,9 +426,9 @@ class Planner(Modifier):
         for op in plan:
             try:
                 if op.operation == "Raster":
-                    if len(op) == 0:
+                    if len(op.children) == 0:
                         continue
-                    if len(op) == 1 and isinstance(op[0], SVGImage):
+                    if len(op.children) == 1 and isinstance(op.children[0], SVGImage):
                         continue  # make raster not needed since its a single real raster.
                     self.jobadd_make_raster()
                     return True
@@ -407,18 +460,22 @@ class Planner(Modifier):
             for op in plan:
                 try:
                     if op.operation == "Raster":
-                        if len(op) == 1 and isinstance(op[0], SVGImage):
+                        if len(op.children) == 1 and isinstance(op.children[0], SVGImage):
                             continue
-                        bounds = CutPlanner.bounding_box(op)
+
+                        subitems = list(op.flat(types=("elem", "opnode")))
+                        make_raster = self.context.registered.get("render-op/make_raster")
+                        bounds = Group.union_bbox([s.object for s in subitems])
+
                         if bounds is None:
                             continue
                         xmin, ymin, xmax, ymax = bounds
 
-                        image = make_raster(op, bounds, step=op.settings.raster_step)
+                        image = make_raster(subitems, bounds, step=op.settings.raster_step)
                         image_element = SVGImage(image=image)
                         image_element.transform.post_translate(xmin, ymin)
-                        op.clear()
-                        op.add_node(image_element)
+                        op.children.clear()
+                        op.add(image_element, type="opnode")
                 except AttributeError:
                     continue
 
@@ -503,17 +560,19 @@ class Planner(Modifier):
         commands.append(actualize)
 
     def conditional_jobadd_scale_rotary(self):
-        if self.context.scale_x != 1.0 or self.context.scale_y != 1.0:
+        rotary_context = self.context.get_context('rotary/1')
+        if rotary_context.scale_x != 1.0 or rotary_context.scale_y != 1.0:
             self.jobadd_scale_rotary()
 
     def jobadd_scale_rotary(self):
         def scale_for_rotary():
-            p = self.context
+            r = self.context.get_context('rotary/1')
+            a = self.context.active
             scale_str = "scale(%f,%f,%f,%f)" % (
-                p.scale_x,
-                p.scale_y,
-                p.current_x,
-                p.current_y,
+                r.scale_x,
+                r.scale_y,
+                a.current_x,
+                a.current_y,
             )
             plan, commands = self.default_plan()
             for o in plan:
@@ -626,6 +685,19 @@ class Planner(Modifier):
         yield COMMAND_HOME
 
     @staticmethod
+    def physicalhome():
+        yield COMMAND_WAIT_FINISH
+        yield COMMAND_HOME, 0, 0
+
+    @staticmethod
+    def offset(x, y):
+        def offset_value():
+            yield COMMAND_WAIT_FINISH
+            yield COMMAND_SET_POSITION, -int(x), -int(y)
+
+        return offset_value
+
+    @staticmethod
     def wait():
         wait_amount = 5.0
         yield COMMAND_WAIT_FINISH
@@ -639,6 +711,7 @@ class Planner(Modifier):
     @staticmethod
     def interrupt():
         yield COMMAND_WAIT_FINISH
+
         def intr():
             input("waiting for user...")
 
