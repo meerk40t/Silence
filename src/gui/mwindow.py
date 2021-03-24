@@ -54,9 +54,19 @@ class MWindow(wx.Frame, Module):
             except RuntimeError:
                 pass
 
+        def console_command(command):
+            def cmd(e=None):
+                self.context(command)
+            return cmd
+
         keyid = wx.NewId()
-        accel_tbl = wx.AcceleratorTable([(wx.ACCEL_CTRL, ord('W'), keyid)])
+        keyid2 = wx.NewId()
+        accel_tbl = wx.AcceleratorTable([
+            (wx.ACCEL_CTRL, ord('W'), keyid),
+            (wx.ACCEL_NORMAL, wx.WXK_F12, keyid2),
+        ])
         window.Bind(wx.EVT_MENU, close_window, id=keyid)
+        window.Bind(wx.EVT_MENU, console_command("window -p / open Terminal\n"), id=keyid2)
         window.SetAcceleratorTable(accel_tbl)
 
     def on_close(self, event):

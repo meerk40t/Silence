@@ -11,6 +11,7 @@ import wx
 from src.gui.icons import icon_UL, icon_up, icon_UR, icon_left, icon_CC, icon_right, icon_LL, icon_down, icon_LR
 from src.gui.mwindow import MWindow
 from src.gui.rasterwizard import RasterWizard
+from src.gui.terminal import Terminal
 from src.kernel import Module
 
 MILS_IN_MM = 39.3701
@@ -1967,7 +1968,7 @@ class SilenceApp(wx.App, Module):
         kernel.register("window/RotarySettings", RotarySettings)
         kernel.register("window/EgvSave", EgvSave)
         kernel.register("window/TraceBoundary", TraceBoundary)
-        # kernel.register("module/Scene", Scene)
+        kernel.register("window/Terminal", Terminal)
         kernel.register("window/RasterWizard", RasterWizard)
 
         context = kernel.get_context('/')

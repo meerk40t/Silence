@@ -23,11 +23,6 @@ PLOT_DIRECTION = 32
 def plugin(kernel, lifecycle=None):
     if lifecycle == "register":
         kernel.register("modifier/Spooler", Spooler)
-        # kernel.register("modifier/Devices", Devices)
-        # kernel.register("modifier/Device", Device)
-    # if lifecycle == "boot":
-    #     kernel_root = kernel.get_context("/")
-    # kernel_root.activate('modifier/Devices')
 
 
 class Devices(Modifier):

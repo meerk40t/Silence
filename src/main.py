@@ -36,9 +36,7 @@ parser.add_argument("input", nargs="?", type=argparse.FileType("r"), help="input
 parser.add_argument("-z", "--no_gui", action="store_true", help="run without gui")
 parser.add_argument("-b", "--batch", type=argparse.FileType("r"), help="console batch file")
 parser.add_argument("-c", "--console", action="store_true", help="start as console")
-parser.add_argument(
-    "-q", "--quit", action="store_true", help="quit on spooler complete"
-)
+parser.add_argument("-q", "--quit", action="store_true", help="quit on spooler complete")
 parser.add_argument("-a", "--auto", action="store_true", help="start running laser")
 parser.add_argument(
     "-s",

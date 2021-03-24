@@ -141,5 +141,15 @@ icons8_fantasy_50 = PyEmbeddedImage(
     b"LRA5oUxflkRvk5SsFjW73+T7xcqi9uEkQR0BcapU4ZXC97w7Db5vWo26UpQkfmSjbz0uttmo"
     b"K2mcjA/wp1AFn9JkpepBU9P4Ix7/A6+u1m3fs0SBAAAAAElFTkSuQmCC"
 )
-
+icons8_console_50 = PyEmbeddedImage(
+    b"iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAABmJLR0QA/wD/AP+gvaeTAAAB"
+    b"ZklEQVRoge2ZQUoDQRBFXzS4iIKCEoILA15Br+LZ1Ft4A0UlCyEuxGBUBPealTsXaRdd0UEM"
+    b"2tPlTE2oBwUNSVf+o6fTMwk4zr+xBhwBEyA0rCaSfRXg2ECg3DqksBJ78xfNLPvE7K8tGQC0"
+    b"6suTRQBYqjuFFi5ijeIeaTQLsyLtwti/tSzgItZwEWu4CLAsZYbZPX0qZ8A9sKuaJp3P/GVF"
+    b"TmTeM9BXi5VOtkgHOKV+mWwRiM/K5zL/AdhWiZaGigjAOnAlPcZALztaGmoiABvAUPrcAFuZ"
+    b"/VJQFQHoAiPpNSTKVUEAguaBOAXeZdyRqhSNFekSL6kA3FHtple7tHrArfQY0dDNvgM8yvxr"
+    b"qt3kM7JF+sATX5t7Uy1aGlkiK8TTPAAD4lny/fVxoXdKXZQRaf/6tp+ZAi8S9gB4m/MBZSg1"
+    b"z3/7tYaLWMNFrOEi1nARayyMyEL99XZZdwgFUu+YHeevfADs2tPOHBgeRwAAAABJRU5ErkJg"
+    b"gg=="
+)
 #----------------------------------------------------------------------

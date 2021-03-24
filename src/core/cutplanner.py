@@ -127,32 +127,6 @@ class Planner(Modifier):
 
         # REQUIRES CUTPLANNER
 
-        @self.context.console_command("embroider", help="embroider <angle> <distance>")
-        def embroider(command, channel, _, args=tuple(), **kwargs):
-            channel(_("Embroidery Filling"))
-            if len(args) >= 1:
-                angle = Angle.parse(args[0])
-            else:
-                angle = None
-            if len(args) >= 2:
-                distance = Length(args[1]).value(
-                    ppi=1000.0, relative_length=bed_dim.bed_height * 39.3701
-                )
-            else:
-                distance = 16
-            for element in elements.elems(emphasized=True):
-                if not isinstance(element, Path):
-                    continue
-                if angle is not None:
-                    element *= Matrix.rotate(angle)
-                e = CutPlanner.eulerian_fill([abs(element)], distance=distance)
-                element.transform.reset()
-                element.clear()
-                element += e
-                if angle is not None:
-                    element *= Matrix.rotate(-angle)
-                element.node.altered()
-
         @self.context.console_option("op", "o", type=str, help="unlock, origin, home")
         @self.context.console_argument(
             "subcommand",
