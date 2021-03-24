@@ -5,7 +5,7 @@ import threading
 import time
 from threading import Lock, Thread
 
-from .svgelements import Color
+from svgelements import Color
 
 
 STATE_UNKNOWN = -1

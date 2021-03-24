@@ -5,7 +5,7 @@ from ezdxf import units
 from ezdxf.tools.rgb import DXF_DEFAULT_COLORS, int2rgb
 from ezdxf.units import decode
 
-from ..svgelements import (SVG_ATTR_VECTOR_EFFECT,
+from svgelements import (SVG_ATTR_VECTOR_EFFECT,
                            SVG_VALUE_NON_SCALING_STROKE, Angle, Arc, Circle,
                            Color, Ellipse, Group, Matrix, Move, Path, Polygon,
                            Polyline, SimpleLine, SVGImage, SVGText, Viewbox)

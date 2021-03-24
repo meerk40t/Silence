@@ -7,7 +7,7 @@ from ..device.lasercommandconstants import (
     COMMAND_MOVE, COMMAND_SET_ABSOLUTE, COMMAND_SET_POSITION, COMMAND_UNLOCK,
     COMMAND_WAIT, COMMAND_WAIT_FINISH)
 from ..kernel import Modifier
-from ..svgelements import (Angle, Length, Matrix, Move, Path, Point, Polygon,
+from svgelements import (Angle, Length, Matrix, Move, Path, Point, Polygon,
                            Polyline, SVGElement, SVGImage, SVGText, Group)
 from .elements import LaserOperation
 
@@ -329,40 +329,6 @@ class Planner(Modifier):
                 channel(_("Spooled Plan."))
                 self.context.signal("plan", self._default_plan, 6)
                 return "plan", plan
-            elif subcommand == "step_repeat":
-                cols = args[1]
-                rows = args[2]
-                x_distance = args[3]
-                y_distance = args[4]
-                # TODO: IMPLEMENT!
-                # TODO: Implement the 0.6.19 switch changes.
-                self.operations.clear()
-                self.preprocessor.commands = list()
-                x_distance = int(x_distance)
-                y_distance = int(y_distance)
-                x_last = 0
-                y_last = 0
-                y_pos = 0
-                x_pos = 0
-                for j in range(rows):
-                    x_pos = 0
-                    for k in range(cols):
-                        x_offset = x_pos - x_last
-                        y_offset = y_pos - y_last
-                        self.operations.append(OperationPreprocessor.origin)
-                        if x_offset != 0 or y_offset != 0:
-                            self.operations.append(
-                                OperationPreprocessor.offset(x_offset, y_offset)
-                            )
-                        self.operations.extend(list(self._original_ops))
-                        x_last = x_pos
-                        y_last = y_pos
-                        x_pos += x_distance
-                    y_pos += y_distance
-                if x_pos != 0 or y_pos != 0:
-                    self.operations.append(OperationPreprocessor.offset(-x_pos, -y_pos))
-                self.refresh_lists()
-                self.update_gui()
             else:
                 channel(_("Unrecognized command."))
 

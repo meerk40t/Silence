@@ -10,7 +10,7 @@ from ..device.lasercommandconstants import (
     COMMAND_WAIT_FINISH,
 )
 from ..kernel import Modifier
-from ..svgelements import (
+from svgelements import (
     Angle,
     Arc,
     Circle,

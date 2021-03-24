@@ -3,7 +3,7 @@ from base64 import b64encode
 from io import BytesIO
 from xml.etree.cElementTree import Element, ElementTree, SubElement
 
-from ..svgelements import (
+from svgelements import (
     SVG, SVG_ATTR_DATA, SVG_ATTR_FILL, SVG_ATTR_FILL_OPACITY, SVG_ATTR_HEIGHT,
     SVG_ATTR_ID, SVG_ATTR_STROKE, SVG_ATTR_STROKE_OPACITY,
     SVG_ATTR_STROKE_WIDTH, SVG_ATTR_TAG, SVG_ATTR_TRANSFORM, SVG_ATTR_VERSION,

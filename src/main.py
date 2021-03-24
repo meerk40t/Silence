@@ -93,23 +93,9 @@ def run():
         pass
 
     try:
-        from .core import bindalias
-
-        kernel.add_plugin(bindalias.plugin)
-    except ImportError:
-        pass
-
-    try:
         from .core import cutplanner
 
         kernel.add_plugin(cutplanner.plugin)
-    except ImportError:
-        pass
-
-    try:
-        from .core import webhelp
-
-        kernel.add_plugin(webhelp.plugin)
     except ImportError:
         pass
 
@@ -124,13 +110,6 @@ def run():
         from .kernel_root.moshi import moshidevice
 
         kernel.add_plugin(moshidevice.plugin)
-    except ImportError:
-        pass
-
-    try:
-        from .device.ruida import ruidadevice
-
-        kernel.add_plugin(ruidadevice.plugin)
     except ImportError:
         pass
 
