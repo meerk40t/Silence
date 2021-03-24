@@ -8,7 +8,8 @@ import sys
 
 import wx
 
-from src.gui.icons import icon_UL, icon_up, icon_UR, icon_left, icon_CC, icon_right, icon_LL, icon_down, icon_LR
+from src.gui.icons import (icon_CC, icon_down, icon_left, icon_LL, icon_LR,
+                           icon_right, icon_UL, icon_up, icon_UR)
 from src.gui.mwindow import MWindow
 from src.gui.rasterwizard import RasterWizard
 from src.gui.terminal import Terminal
@@ -375,9 +376,15 @@ class Silence(MWindow):
         self.checkbox_invert = wx.CheckBox(
             self.advanced_settings, wx.ID_ANY, "Invert Raster Color"
         )
-        self.checkbox_mirror = wx.CheckBox(self.advanced_settings, wx.ID_ANY, "Mirror Design")
-        self.checkbox_rotate = wx.CheckBox(self.advanced_settings, wx.ID_ANY, "Rotate Design")
-        self.checkbox_csys = wx.CheckBox(self.advanced_settings, wx.ID_ANY, "Use Input CSYS")
+        self.checkbox_mirror = wx.CheckBox(
+            self.advanced_settings, wx.ID_ANY, "Mirror Design"
+        )
+        self.checkbox_rotate = wx.CheckBox(
+            self.advanced_settings, wx.ID_ANY, "Rotate Design"
+        )
+        self.checkbox_csys = wx.CheckBox(
+            self.advanced_settings, wx.ID_ANY, "Use Input CSYS"
+        )
         self.checkbox_cut_inner = wx.CheckBox(
             self.advanced_settings, wx.ID_ANY, "Cut Inside First"
         )
@@ -393,7 +400,9 @@ class Silence(MWindow):
         self.text_raster_passes = wx.TextCtrl(self.advanced_settings, wx.ID_ANY, "1")
         self.text_engrave_passes = wx.TextCtrl(self.advanced_settings, wx.ID_ANY, "1")
         self.text_cut_passes = wx.TextCtrl(self.advanced_settings, wx.ID_ANY, "1")
-        self.button_hide_advanced = wx.Button(self.advanced_settings, wx.ID_ANY, "Hide Advanced")
+        self.button_hide_advanced = wx.Button(
+            self.advanced_settings, wx.ID_ANY, "Hide Advanced"
+        )
         self.main_view_panel = wx.Panel(self, wx.ID_ANY)
 
         self.__set_properties()
@@ -463,25 +472,25 @@ class Silence(MWindow):
             channel(_("Refreshed."))
             return
 
-        self.context.setting(str, 'project', None)
-        self.context.setting(float, 'jog_step', 10.0)
-        self.context.setting(float, 'move_x', 0.0)
-        self.context.setting(float, 'move_y', 0.0)
-        self.context.setting(float, 'raster_speed', 100.0)
-        self.context.setting(float, 'engrave_speed', 20.0)
-        self.context.setting(float, 'cut_speed', 10.0)
-        self.context.setting(bool, 'halftone', True)
-        self.context.setting(bool, 'invert', False)
-        self.context.setting(bool, 'mirror', False)
-        self.context.setting(bool, 'rotate', False)
-        self.context.setting(bool, 'csys', False)
-        self.context.setting(bool, 'cut_inner', True)
-        self.context.setting(bool, 'rotary_enable', False)
-        self.context.setting(bool, 'group_engrave', False)
-        self.context.setting(bool, 'group_vector', False)
-        self.context.setting(int, 'raster_passes', 1)
-        self.context.setting(int, 'engrave_passes', 1)
-        self.context.setting(int, 'cut_passes', 1)
+        self.context.setting(str, "project", None)
+        self.context.setting(float, "jog_step", 10.0)
+        self.context.setting(float, "move_x", 0.0)
+        self.context.setting(float, "move_y", 0.0)
+        self.context.setting(float, "raster_speed", 100.0)
+        self.context.setting(float, "engrave_speed", 20.0)
+        self.context.setting(float, "cut_speed", 10.0)
+        self.context.setting(bool, "halftone", True)
+        self.context.setting(bool, "invert", False)
+        self.context.setting(bool, "mirror", False)
+        self.context.setting(bool, "rotate", False)
+        self.context.setting(bool, "csys", False)
+        self.context.setting(bool, "cut_inner", True)
+        self.context.setting(bool, "rotary_enable", False)
+        self.context.setting(bool, "group_engrave", False)
+        self.context.setting(bool, "group_vector", False)
+        self.context.setting(int, "raster_passes", 1)
+        self.context.setting(int, "engrave_passes", 1)
+        self.context.setting(int, "cut_passes", 1)
         self.text_jog_step.SetValue(str(self.context.jog_step))
         self.text_move_x.SetValue(str(self.context.move_x))
         self.text_move_y.SetValue(str(self.context.move_y))
@@ -504,7 +513,7 @@ class Silence(MWindow):
         self.context.listen("rotary_enable", self.on_rotary_enable)
         self.context.listen("halftone", self.on_halftone)
 
-    def on_halftone(self,  *args, **kwargs):
+    def on_halftone(self, *args, **kwargs):
         self.checkbox_halftone.SetValue(self.context.halftone)
 
     def on_rotary_enable(self, *args, **kwargs):
@@ -748,7 +757,9 @@ class Silence(MWindow):
         sizer_2.Add(self.panel_3, 0, wx.EXPAND, 0)
         self.panel_6.SetSizer(sizer_2)
         sizer_1.Add(self.panel_6, 1, wx.EXPAND, 0)
-        static_line_8 = wx.StaticLine(self.advanced_settings, wx.ID_ANY, style=wx.LI_VERTICAL)
+        static_line_8 = wx.StaticLine(
+            self.advanced_settings, wx.ID_ANY, style=wx.LI_VERTICAL
+        )
         sizer_20.Add(static_line_8, 0, wx.EXPAND, 0)
         label_9 = wx.StaticText(self.advanced_settings, wx.ID_ANY, "Advanced Settings")
         sizer_19.Add(label_9, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
@@ -770,11 +781,15 @@ class Silence(MWindow):
         sizer_19.Add(self.checkbox_group_vector, 1, 0, 0)
         static_line_7 = wx.StaticLine(self.advanced_settings, wx.ID_ANY)
         sizer_19.Add(static_line_7, 0, wx.EXPAND, 0)
-        label_12 = wx.StaticText(self.advanced_settings, wx.ID_ANY, "Raster Eng. Passes")
+        label_12 = wx.StaticText(
+            self.advanced_settings, wx.ID_ANY, "Raster Eng. Passes"
+        )
         sizer_21.Add(label_12, 0, 0, 0)
         sizer_21.Add(self.text_raster_passes, 0, 0, 0)
         sizer_19.Add(sizer_21, 1, wx.EXPAND, 0)
-        label_13 = wx.StaticText(self.advanced_settings, wx.ID_ANY, "Vector Eng. Passes")
+        label_13 = wx.StaticText(
+            self.advanced_settings, wx.ID_ANY, "Vector Eng. Passes"
+        )
         sizer_22.Add(label_13, 0, 0, 0)
         sizer_22.Add(self.text_engrave_passes, 0, 0, 0)
         sizer_19.Add(sizer_22, 1, wx.EXPAND, 0)
@@ -927,7 +942,9 @@ class Silence(MWindow):
         self.context.console("align bottom right\n")
 
     def on_button_move(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.console("move_to %fmm %fmm\n" % (self.context.move_x, self.context.move_y))
+        self.context.console(
+            "move_to %fmm %fmm\n" % (self.context.move_x, self.context.move_y)
+        )
 
     def on_text_move_x(self, event):  # wxGlade: Silence.<event_handler>
         try:
@@ -1115,22 +1132,22 @@ class GeneralSettings(MWindow):
         self.Bind(wx.EVT_TEXT, self.on_text_y_factor, self.text_y_factor)
         self.Bind(wx.EVT_BUTTON, self.on_button_save, self.button_save)
         # end wxGlade
-        self.context.setting(int, 'units', 0)
-        self.context.setting(bool, 'init_home', True)
-        self.context.setting(bool, 'finish_unlock', False)
-        self.context.setting(bool, 'finish_beep', False)
-        self.context.setting(bool, 'finish_batch', False)
-        self.context.setting(bool, 'finish_popup', False)
-        self.context.setting(str, 'finish_batch_file', None)
-        self.context.setting(bool, 'crc_preprocess', False)
-        self.context.setting(str, 'inkscape_path', None)
-        self.context.setting(float, 'inkscape_timeout', 3.0)
-        self.context.setting(bool, 'home_right', False)
-        self.context.setting(str, 'board', "M2")
-        self.context.setting(float, 'bedwidth', 325.0)
-        self.context.setting(float, 'bedheight', 220.0)
-        self.context.setting(float, 'x_factor', 1.0)
-        self.context.setting(float, 'y_factor', 1.0)
+        self.context.setting(int, "units", 0)
+        self.context.setting(bool, "init_home", True)
+        self.context.setting(bool, "finish_unlock", False)
+        self.context.setting(bool, "finish_beep", False)
+        self.context.setting(bool, "finish_batch", False)
+        self.context.setting(bool, "finish_popup", False)
+        self.context.setting(str, "finish_batch_file", None)
+        self.context.setting(bool, "crc_preprocess", False)
+        self.context.setting(str, "inkscape_path", None)
+        self.context.setting(float, "inkscape_timeout", 3.0)
+        self.context.setting(bool, "home_right", False)
+        self.context.setting(str, "board", "M2")
+        self.context.setting(float, "bedwidth", 325.0)
+        self.context.setting(float, "bedheight", 220.0)
+        self.context.setting(float, "x_factor", 1.0)
+        self.context.setting(float, "y_factor", 1.0)
         if self.context.units == 0:
             self.radio_units_mm.SetValue(True)
             self.radio_units_inch.SetValue(False)
@@ -1455,13 +1472,13 @@ class RasterSettings(MWindow):
             self.slider_raster_transition,
         )
         # end wxGlade
-        self.context.setting(int, 'raster_step', 2)
-        self.context.setting(bool, 'raster_bottom', False)
-        self.context.setting(bool, 'halftone', True)
-        self.context.setting(int, 'halftone_resolution', 2)
-        self.context.setting(float, 'halftone_black', 2.5)
-        self.context.setting(float, 'halftone_white', 0.50)
-        self.context.setting(float, 'halftone_transition', 3.5)
+        self.context.setting(int, "raster_step", 2)
+        self.context.setting(bool, "raster_bottom", False)
+        self.context.setting(bool, "halftone", True)
+        self.context.setting(int, "halftone_resolution", 2)
+        self.context.setting(float, "halftone_black", 2.5)
+        self.context.setting(float, "halftone_white", 0.50)
+        self.context.setting(float, "halftone_transition", 3.5)
         self.text_scanline_step.SetValue(str(self.context.raster_step / 1000.0))
         self.check_bottom_up.SetValue(self.context.raster_bottom)
         self.check_halftone.SetValue(self.context.halftone)
@@ -1480,7 +1497,6 @@ class RasterSettings(MWindow):
         self.slider_raster_black.Enable(self.context.halftone)
         self.slider_raster_white.Enable(self.context.halftone)
         self.slider_raster_transition.Enable(self.context.halftone)
-
 
     def window_close(self):
         self.context.unlisten("halftone", self.on_halftone)
@@ -1552,7 +1568,9 @@ class RasterSettings(MWindow):
 
     def on_text_scanline_step(self, event):  # wxGlade: RasterSettings.<event_handler>
         try:
-            self.context.raster_step = int(float(self.text_scanline_step.GetValue()) * 1000)
+            self.context.raster_step = int(
+                float(self.text_scanline_step.GetValue()) * 1000
+            )
         except ValueError:
             pass
 
@@ -1567,7 +1585,9 @@ class RasterSettings(MWindow):
     def on_choice_halftone_resolution(
         self, event
     ):  # wxGlade: RasterSettings.<event_handler>
-        self.context.halftone_resolution = self.choice_halftone_resolution.GetSelection()
+        self.context.halftone_resolution = (
+            self.choice_halftone_resolution.GetSelection()
+        )
 
     def on_slider_black(self, event):  # wxGlade: RasterSettings.<event_handler>
         self.context.halftone_black = self.slider_raster_black.Value
@@ -1577,6 +1597,7 @@ class RasterSettings(MWindow):
 
     def on_slider_transition(self, event):  # wxGlade: RasterSettings.<event_handler>
         self.context.halftone_black = self.slider_raster_transition.Value
+
 
 # end of class RasterSettings
 
@@ -1598,9 +1619,9 @@ class RotarySettings(MWindow):
         self.Bind(wx.EVT_TEXT, self.on_text_rotary_scale_y, self.text_rotary_scale_y)
         self.Bind(wx.EVT_TEXT, self.on_text_rotary_speed, self.text_rotary_speed_rapid)
         # end wxGlade
-        self.context.setting(bool, 'rotary_enable', False)
-        self.context.setting(float, 'rotary_scale_y', 1.0)
-        self.context.setting(float, 'rotary_speed', 0.0)
+        self.context.setting(bool, "rotary_enable", False)
+        self.context.setting(float, "rotary_scale_y", 1.0)
+        self.context.setting(float, "rotary_speed", 0.0)
         self.check_rotary_enable.SetValue(self.context.rotary_enable)
         self.text_rotary_scale_y.SetValue(str(self.context.rotary_scale_y))
         self.text_rotary_speed_rapid.SetValue(str(self.context.rotary_speed))
@@ -1895,7 +1916,6 @@ class TraceBoundary(MWindow):
 
 
 class SilenceApp(wx.App, Module):
-
     def __init__(self, context, path):
         wx.App.__init__(self, 0)
 
@@ -1971,21 +1991,30 @@ class SilenceApp(wx.App, Module):
         kernel.register("window/Terminal", Terminal)
         kernel.register("window/RasterWizard", RasterWizard)
 
-        context = kernel.get_context('/')
+        context = kernel.get_context("/")
 
-        @kernel.console_option('path', 'p', type=context.get_context, default=context.active,
-                               help="Context Path at which to open the window")
-        @kernel.console_argument('subcommand', type=str, help="open <window>")
-        @kernel.console_argument('window', type=str, help="window to apply subcommand to")
+        @kernel.console_option(
+            "path",
+            "p",
+            type=context.get_context,
+            default=context.active,
+            help="Context Path at which to open the window",
+        )
+        @kernel.console_argument("subcommand", type=str, help="open <window>")
+        @kernel.console_argument(
+            "window", type=str, help="window to apply subcommand to"
+        )
         @kernel.console_command("window", help="Silence window information")
-        def window(channel, _, subcommand=None, window=None, path=None, args=(), **kwargs):
+        def window(
+            channel, _, subcommand=None, window=None, path=None, args=(), **kwargs
+        ):
             """
             Opens a MeerK40t window or provides information. This command is restricted to use with the wxMeerK40t gui.
             This also allows use of a -p flag that sets the context path for this window to operate at. This should
             often be restricted to where the windows are typically opened since their function and settings usually
             depend on the context used. The default root path is "/". Eg. "window open -p / Settings"
             """
-            context = kernel.get_context('/')
+            context = kernel.get_context("/")
             if path is None:
                 path = context.active
             if subcommand is None:
@@ -2006,7 +2035,7 @@ class SilenceApp(wx.App, Module):
                     channel(_("%d: %s as type of %s") % (i + 1, name, type(module)))
                 channel(_("----------"))
                 return
-            if window is None or subcommand == 'list':
+            if window is None or subcommand == "list":
                 channel(_("----------"))
                 channel(_("Windows Registered:"))
                 for i, name in enumerate(context.match("window")):
@@ -2039,9 +2068,9 @@ class SilenceApp(wx.App, Module):
             elif subcommand == "reset":
                 if kernel._config is not None:
                     for context in list(kernel.contexts):
-                        if context.startswith('window'):
+                        if context.startswith("window"):
                             del kernel.contexts[context]
-                    kernel._config.DeleteGroup('window')
+                    kernel._config.DeleteGroup("window")
             else:
                 raise SyntaxError
 
@@ -2084,4 +2113,3 @@ class SilenceApp(wx.App, Module):
         else:
             self.locale = None
         context.signal("language", (lang, language_code, language_name, language_index))
-

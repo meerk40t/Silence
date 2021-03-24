@@ -37,7 +37,7 @@ class MoshiInterpreter(Interpreter, Modifier):
 
     def attach(self, *a, **kwargs):
         context = self.context
-        root_context = context.get_context('/')
+        root_context = context.get_context("/")
         kernel = context._kernel
         _ = kernel.translation
 
@@ -415,7 +415,7 @@ class MoshiInterpreter(Interpreter, Modifier):
     def calc_home_position(self):
         x = self.context.home_adjust_x
         y = self.context.home_adjust_y
-        bed_dim = self.context.get_context('/')
+        bed_dim = self.context.get_context("/")
         bed_dim.setting(int, "bed_width", 310)
         bed_dim.setting(int, "bed_height", 210)
         if self.context.home_right:

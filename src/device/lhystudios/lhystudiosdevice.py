@@ -1,5 +1,6 @@
-from ...kernel import STATE_UNKNOWN, Modifier
 from svgelements import Length
+
+from ...kernel import STATE_UNKNOWN, Modifier
 from ..lasercommandconstants import *
 from .lhymicrointerpreter import LhymicroInterpreter
 from .lhystudiocontroller import LhystudioController
@@ -37,7 +38,7 @@ class LhystudiosDevice(Modifier):
         self.state = STATE_UNKNOWN
         self.dx = 0
         self.dy = 0
-        self.bed_dim = context.get_context('/')
+        self.bed_dim = context.get_context("/")
         self.bed_dim.setting(int, "bed_width", 310)
         self.bed_dim.setting(int, "bed_height", 210)
 
@@ -84,7 +85,7 @@ class LhystudiosDevice(Modifier):
 
     def attach(self, *a, **kwargs):
         context = self.context
-        root_context = context.get_context('/')
+        root_context = context.get_context("/")
         kernel = context._kernel
 
         @context.console_command("+laser", hidden=True, help="turn laser on in place")

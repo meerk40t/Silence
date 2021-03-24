@@ -34,9 +34,13 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-V", "--version", action="store_true", help="MeerK40t version")
 parser.add_argument("input", nargs="?", type=argparse.FileType("r"), help="input file")
 parser.add_argument("-z", "--no_gui", action="store_true", help="run without gui")
-parser.add_argument("-b", "--batch", type=argparse.FileType("r"), help="console batch file")
+parser.add_argument(
+    "-b", "--batch", type=argparse.FileType("r"), help="console batch file"
+)
 parser.add_argument("-c", "--console", action="store_true", help="start as console")
-parser.add_argument("-q", "--quit", action="store_true", help="quit on spooler complete")
+parser.add_argument(
+    "-q", "--quit", action="store_true", help="quit on spooler complete"
+)
 parser.add_argument("-a", "--auto", action="store_true", help="start running laser")
 parser.add_argument(
     "-s",
@@ -47,7 +51,9 @@ parser.add_argument(
     metavar="key=value",
     help="set a device variable",
 )
-parser.add_argument("-P", "--profile", type=int, default=None, help="Specify a settings profile index")
+parser.add_argument(
+    "-P", "--profile", type=int, default=None, help="Specify a settings profile index"
+)
 
 
 def run():
@@ -59,9 +65,9 @@ def run():
         return
 
     if args.profile is not None:
-        path = 'profile%d' % args.profile
+        path = "profile%d" % args.profile
     else:
-        path = ''
+        path = ""
     kernel = Kernel("Silence", SILENCE_VERSION, "Silence", path)
 
     from .device import basedevice
@@ -150,6 +156,7 @@ def run():
     kernel.bootstrap("ready")
 
     if args.console:
+
         def thread_text_console():
             kernel_root.channel("console").watch(print)
             while True:
@@ -160,6 +167,7 @@ def run():
                 if console_command in ("quit", "shutdown"):
                     break
             kernel_root.channel("console").unwatch(print)
+
         if args.no_gui:
             thread_text_console()
         else:

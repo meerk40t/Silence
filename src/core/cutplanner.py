@@ -1,14 +1,15 @@
 from copy import copy
 from math import ceil, isinf, isnan
 
+from svgelements import (Angle, Group, Length, Matrix, Move, Path, Point,
+                         Polygon, Polyline, SVGElement, SVGImage, SVGText)
+
 from ..core.cutcode import CutCode
 from ..device.lasercommandconstants import (
     COMMAND_BEEP, COMMAND_FUNCTION, COMMAND_HOME, COMMAND_MODE_RAPID,
     COMMAND_MOVE, COMMAND_SET_ABSOLUTE, COMMAND_SET_POSITION, COMMAND_UNLOCK,
     COMMAND_WAIT, COMMAND_WAIT_FINISH)
 from ..kernel import Modifier
-from svgelements import (Angle, Length, Matrix, Move, Path, Point, Polygon,
-                           Polyline, SVGElement, SVGImage, SVGText, Group)
 from .elements import LaserOperation
 
 
@@ -48,8 +49,8 @@ class Planner(Modifier):
         kernel = self.context._kernel
         _ = kernel.translation
         elements = context.elements
-        rotary_context = self.context.get_context('rotary/1')
-        bed_dim = self.context.get_context('/')
+        rotary_context = self.context.get_context("rotary/1")
+        bed_dim = self.context.get_context("/")
         rotary_context.setting(bool, "rotary", False)
         rotary_context.setting(float, "scale_x", 1.0)
         rotary_context.setting(float, "scale_y", 1.0)
@@ -210,7 +211,7 @@ class Planner(Modifier):
                     channel(_("No plan command found."))
                 return
             elif subcommand == "preprocess":
-                rotary_context = self.context.get_context('rotary/1')
+                rotary_context = self.context.get_context("rotary/1")
                 if self.context.prephysicalhome:
                     if not rotary_context.rotary:
                         plan.insert(0, self.context.registered["plan/physicalhome"])
@@ -400,18 +401,24 @@ class Planner(Modifier):
             for op in plan:
                 try:
                     if op.operation == "Raster":
-                        if len(op.children) == 1 and isinstance(op.children[0], SVGImage):
+                        if len(op.children) == 1 and isinstance(
+                            op.children[0], SVGImage
+                        ):
                             continue
 
                         subitems = list(op.flat(types=("elem", "opnode")))
-                        make_raster = self.context.registered.get("render-op/make_raster")
+                        make_raster = self.context.registered.get(
+                            "render-op/make_raster"
+                        )
                         bounds = Group.union_bbox([s.object for s in subitems])
 
                         if bounds is None:
                             continue
                         xmin, ymin, xmax, ymax = bounds
 
-                        image = make_raster(subitems, bounds, step=op.settings.raster_step)
+                        image = make_raster(
+                            subitems, bounds, step=op.settings.raster_step
+                        )
                         image_element = SVGImage(image=image)
                         image_element.transform.post_translate(xmin, ymin)
                         op.children.clear()
@@ -500,13 +507,13 @@ class Planner(Modifier):
         commands.append(actualize)
 
     def conditional_jobadd_scale_rotary(self):
-        rotary_context = self.context.get_context('rotary/1')
+        rotary_context = self.context.get_context("rotary/1")
         if rotary_context.scale_x != 1.0 or rotary_context.scale_y != 1.0:
             self.jobadd_scale_rotary()
 
     def jobadd_scale_rotary(self):
         def scale_for_rotary():
-            r = self.context.get_context('rotary/1')
+            r = self.context.get_context("rotary/1")
             a = self.context.active
             scale_str = "scale(%f,%f,%f,%f)" % (
                 r.scale_x,
