@@ -10,7 +10,6 @@ from ..device.lasercommandconstants import (
     COMMAND_MOVE, COMMAND_SET_ABSOLUTE, COMMAND_SET_POSITION, COMMAND_UNLOCK,
     COMMAND_WAIT, COMMAND_WAIT_FINISH)
 from ..kernel import Modifier
-from .elements import LaserOperation
 
 
 def plugin(kernel, lifecycle=None):
@@ -522,14 +521,6 @@ class Planner(Modifier):
                 a.current_y,
             )
             plan, commands = self.default_plan()
-            for o in plan:
-                if isinstance(o, LaserOperation):
-                    for e in o.children:
-                        e = e.object
-                        try:
-                            e *= scale_str
-                        except AttributeError:
-                            pass
             self.conditional_jobadd_actualize_image()
 
         plan, commands = self.default_plan()

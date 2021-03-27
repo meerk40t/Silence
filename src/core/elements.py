@@ -35,6 +35,24 @@ class ElementCore(Modifier):
         context.save_types = self.save_types
         context.load = self.load
         context.load_types = self.load_types
+
+        @self.context.console_argument(
+            "op",
+            type=str,
+            help="operation to execute",
+        )
+        @self.context.console_command(
+            "execute",
+            help="execute <operation>",
+        )
+        def plan(command, channel, _, op=None, args=tuple(), **kwargs):
+            if op == "engrave":
+                self.context.get_context('/').spooler.job(self.engrave)
+            elif op == "cut":
+                self.context.get_context('/').spooler.job(self.cut)
+            elif op == "raster":
+                self.context.get_context('/').spooler.job(self.raster)
+
         @self.context.console_argument(
             "setting",
             type=str,
