@@ -476,9 +476,6 @@ class Silence(MWindow):
         self.context.setting(float, "jog_step", 10.0)
         self.context.setting(float, "move_x", 0.0)
         self.context.setting(float, "move_y", 0.0)
-        self.context.setting(float, "raster_speed", 100.0)
-        self.context.setting(float, "engrave_speed", 20.0)
-        self.context.setting(float, "cut_speed", 10.0)
         self.context.setting(bool, "halftone", True)
         self.context.setting(bool, "invert", False)
         self.context.setting(bool, "mirror", False)
@@ -488,9 +485,6 @@ class Silence(MWindow):
         self.context.setting(bool, "rotary_enable", False)
         self.context.setting(bool, "group_engrave", False)
         self.context.setting(bool, "group_vector", False)
-        self.context.setting(int, "raster_passes", 1)
-        self.context.setting(int, "engrave_passes", 1)
-        self.context.setting(int, "cut_passes", 1)
         self.text_jog_step.SetValue(str(self.context.jog_step))
         self.text_move_x.SetValue(str(self.context.move_x))
         self.text_move_y.SetValue(str(self.context.move_y))
@@ -527,7 +521,6 @@ class Silence(MWindow):
         self.text_raster_speed.SetValue(str(self.context.raster_settings.speed))
         self.text_engrave_speed.SetValue(str(self.context.engrave_settings.speed))
         self.text_cut_speed.SetValue(str(self.context.cut_settings.speed))
-
 
     def window_close(self):
         self.context("quit\n")
