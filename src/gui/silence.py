@@ -494,9 +494,9 @@ class Silence(MWindow):
         self.text_jog_step.SetValue(str(self.context.jog_step))
         self.text_move_x.SetValue(str(self.context.move_x))
         self.text_move_y.SetValue(str(self.context.move_y))
-        self.text_raster_speed.SetValue(str(self.context.raster_speed))
-        self.text_engrave_speed.SetValue(str(self.context.engrave_speed))
-        self.text_cut_speed.SetValue(str(self.context.cut_speed))
+        self.text_raster_speed.SetValue(str(self.context.raster_settings.speed))
+        self.text_engrave_speed.SetValue(str(self.context.engrave_settings.speed))
+        self.text_cut_speed.SetValue(str(self.context.cut_settings.speed))
         self.checkbox_halftone.SetValue(self.context.halftone)
         self.checkbox_invert.SetValue(self.context.invert)
         self.checkbox_rotate.SetValue(self.context.rotate)
@@ -505,13 +505,14 @@ class Silence(MWindow):
         self.checkbox_rotary_enable.SetValue(self.context.rotary_enable)
         self.checkbox_group_vector.SetValue(self.context.group_vector)
         self.checkbox_group_engrave.SetValue(self.context.group_engrave)
-        self.text_raster_passes.SetValue(str(self.context.raster_passes))
-        self.text_engrave_passes.SetValue(str(self.context.engrave_passes))
-        self.text_cut_passes.SetValue(str(self.context.cut_passes))
+        self.text_raster_passes.SetValue(str(self.context.raster_settings.passes))
+        self.text_engrave_passes.SetValue(str(self.context.engrave_settings.passes))
+        self.text_cut_passes.SetValue(str(self.context.cut_settings.passes))
         self.toggle_advance_settings()
 
         self.context.listen("rotary_enable", self.on_rotary_enable)
         self.context.listen("halftone", self.on_halftone)
+        self.context.listen("op_setting_update", self.on_op_setting_update)
 
     def on_halftone(self, *args, **kwargs):
         self.checkbox_halftone.SetValue(self.context.halftone)
@@ -519,10 +520,20 @@ class Silence(MWindow):
     def on_rotary_enable(self, *args, **kwargs):
         self.checkbox_rotary_enable.SetValue(self.context.rotary_enable)
 
+    def on_op_setting_update(self, *args, **kwargs):
+        self.text_raster_passes.SetValue(str(self.context.raster_settings.passes))
+        self.text_engrave_passes.SetValue(str(self.context.engrave_settings.passes))
+        self.text_cut_passes.SetValue(str(self.context.cut_settings.passes))
+        self.text_raster_speed.SetValue(str(self.context.raster_settings.speed))
+        self.text_engrave_speed.SetValue(str(self.context.engrave_settings.speed))
+        self.text_cut_speed.SetValue(str(self.context.cut_settings.speed))
+
+
     def window_close(self):
         self.context("quit\n")
         self.context.unlisten("rotary_enable", self.on_rotary_enable)
         self.context.unlisten("halftone", self.on_halftone)
+        self.context.unlisten("op_setting_update", self.on_op_setting_update)
 
     def __set_properties(self):
         # begin wxGlade: Silence.__set_properties
@@ -954,7 +965,7 @@ class Silence(MWindow):
 
     def on_text_move_y(self, event):  # wxGlade: Silence.<event_handler>
         try:
-            self.context.move_x = float(self.text_move_y.Value)
+            self.context.move_y = float(self.text_move_y.Value)
         except ValueError:
             pass
 
@@ -963,7 +974,7 @@ class Silence(MWindow):
 
     def on_text_raster_speed(self, event):  # wxGlade: Silence.<event_handler>
         try:
-            self.context.raster_speed = float(self.text_raster_speed.Value)
+            self.context.raster_settings.speed = float(self.text_raster_speed.Value)
         except ValueError:
             pass
 
@@ -972,7 +983,7 @@ class Silence(MWindow):
 
     def on_text_engrave_speed(self, event):  # wxGlade: Silence.<event_handler>
         try:
-            self.context.engrave_speed = float(self.text_engrave_speed.Value)
+            self.context.engrave_settings.speed = float(self.text_engrave_speed.Value)
         except ValueError:
             pass
 
@@ -981,7 +992,7 @@ class Silence(MWindow):
 
     def on_text_cut_speed(self, event):  # wxGlade: Silence.<event_handler>
         try:
-            self.context.cut_speed = float(self.text_cut_speed.Value)
+            self.context.cut_settings.speed = float(self.text_cut_speed.Value)
         except ValueError:
             pass
 

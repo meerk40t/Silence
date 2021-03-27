@@ -35,6 +35,12 @@ class ElementCore(Modifier):
         context.save_types = self.save_types
         context.load = self.load
         context.load_types = self.load_types
+        context.engrave = self.engrave
+        context.cut = self.cut
+        context.raster = self.raster
+        context.engrave_settings = self.engrave_settings
+        context.cut_settings = self.cut_settings
+        context.raster_settings = self.raster_settings
 
         @self.context.console_argument(
             "op",
@@ -61,13 +67,13 @@ class ElementCore(Modifier):
         @self.context.console_argument(
             "value",
             type=str,
-            help="setting",
+            help="value",
         )
         @self.context.console_command(
             ("cut", "engrave", "raster"),
             help="operation<?> <setting> <value>",
         )
-        def plan(command, channel, _, setting, value=None, args=tuple(), **kwargs):
+        def plan(command, channel, _, setting, value, args=tuple(), **kwargs):
 
             if command == "engrave":
                 s = self.engrave_settings
@@ -77,12 +83,16 @@ class ElementCore(Modifier):
                 s = self.raster_settings
             else:
                 raise ValueError
-            v = getattr(s, value)
+            try:
+                v = getattr(s, setting)
+            except AttributeError:
+                return
             if v is None:
                 return
             t = type(v)
-            setattr(s, value, t(setting))
-            channel(_("Set %s setting %s from %s to %s.") % (command, setting, str(v), setting))
+            setattr(s, setting, t(value))
+            channel(_("Set %s setting %s from %s to %s.") % (command, setting, str(v), value))
+            self.context.signal("op_setting_update", command)
 
     def detach(self, *a, **kwargs):
         context = self.context
