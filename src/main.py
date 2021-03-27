@@ -120,7 +120,6 @@ def run():
     kernel_root.device_version = SILENCE_VERSION
     kernel_root.device_name = "Silence"
 
-
     kernel.bootstrap("register")
     kernel.bootstrap("configure")
 

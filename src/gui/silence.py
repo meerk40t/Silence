@@ -118,7 +118,7 @@ class Silence(MWindow):
         self.silence_menubar.Append(wxglade_tmp_menu, "File")
         wxglade_tmp_menu = wx.Menu()
         self.silence_menubar.scene_refresh = wxglade_tmp_menu.Append(
-            wx.ID_ANY, "Refresh <F5>", "Refreshes items displayed in the main window."
+            wx.ID_ANY, "Refresh\tF5", "Refreshes items displayed in the main window."
         )
         self.Bind(
             wx.EVT_MENU,
@@ -202,7 +202,7 @@ class Silence(MWindow):
             id=self.silence_menubar.tool_raster.GetId(),
         )
         self.silence_menubar.tool_hull = wxglade_tmp_menu.Append(
-            wx.ID_ANY, "Trace Design Boundary <Ctrl-T>", "Trace Design"
+            wx.ID_ANY, "Trace Design Boundary\tCtrl-T", "Trace Design"
         )
         self.Bind(
             wx.EVT_MENU,
@@ -212,7 +212,7 @@ class Silence(MWindow):
         wxglade_tmp_menu.AppendSeparator()
         self.silence_menubar.usb_init = wxglade_tmp_menu.Append(
             wx.ID_ANY,
-            "Initialize Laser <Ctrl-i>",
+            "Initialize Laser\tCtrl-i",
             'Establish connection with the laser controller board, and optionally Home the laser depending on the setting in the General settings window for "Home Upon initialize"',
         )
         self.Bind(
@@ -241,7 +241,7 @@ class Silence(MWindow):
         self.silence_menubar.Append(wxglade_tmp_menu, "Tools")
         wxglade_tmp_menu = wx.Menu()
         self.silence_menubar.settings_general = wxglade_tmp_menu.Append(
-            wx.ID_ANY, "General Settings <F2>", "Opens the General Settings window."
+            wx.ID_ANY, "General Settings\tF2", "Opens the General Settings window."
         )
         self.Bind(
             wx.EVT_MENU,
@@ -249,7 +249,7 @@ class Silence(MWindow):
             id=self.silence_menubar.settings_general.GetId(),
         )
         self.silence_menubar.settings_raster = wxglade_tmp_menu.Append(
-            wx.ID_ANY, "Raster Settings <F3>", "Opens the Raster Settings Window"
+            wx.ID_ANY, "Raster Settings\tF3", "Opens the Raster Settings Window"
         )
         self.Bind(
             wx.EVT_MENU,
@@ -258,7 +258,7 @@ class Silence(MWindow):
         )
         self.silence_menubar.settings_rotary = wxglade_tmp_menu.Append(
             wx.ID_ANY,
-            "Rotary Settings <F4>",
+            "Rotary Settings\tF4",
             "Shows (or hides) the Advanced Settings in the main window.",
         )
         self.Bind(
@@ -268,7 +268,7 @@ class Silence(MWindow):
         )
         wxglade_tmp_menu.AppendSeparator()
         self.silence_menubar.settings_advanced = wxglade_tmp_menu.Append(
-            wx.ID_ANY, "Advanced Settings <F6>", "Toggle advanced settings"
+            wx.ID_ANY, "Advanced Settings\tF6", "Toggle advanced settings"
         )
         self.Bind(
             wx.EVT_MENU,
