@@ -151,19 +151,28 @@ class ElementCore(Modifier):
         context.raster_settings = self.raster_settings
 
         @self.context.console_command(
-            ("cut", "engrave", "raster"),
-            help="operation<?> <setting> <value>",
+            "cut",
+            help="starts an op chain",
             output_type="op"
         )
-        def op_init(command, channel, _, setting=None, value=None, args=tuple(), **kwargs):
-            if command == "engrave":
-                return "op", ("engrave", self.engrave, self.engrave_settings)
-            elif command == "cut":
-                return "op", ("cut", self.cut, self.cut_settings)
-            elif command == "raster":
-                return "op", ("raster", self.raster, self.raster_settings)
-            else:
-                raise ValueError
+        def op_init(command, **kwargs):
+            return "op", ("cut", self.cut, self.cut_settings)
+
+        @self.context.console_command(
+            "engrave",
+            help="starts an op chain",
+            output_type="op"
+        )
+        def op_init(command, **kwargs):
+            return "op", ("engrave", self.engrave, self.engrave_settings)
+
+        @self.context.console_command(
+            "raster",
+            help="starts an op chain",
+            output_type="op"
+        )
+        def op_init(command, **kwargs):
+            return "op", ("raster", self.raster, self.raster_settings)
 
         @self.context.console_argument(
             "setting",

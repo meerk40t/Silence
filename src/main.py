@@ -70,32 +70,31 @@ def run():
         path = ""
     kernel = Kernel("Silence", SILENCE_VERSION, "Silence", path)
 
-    from .device import basedevice
+    from .core import webhelp
+    kernel.add_plugin(webhelp.plugin)
 
+    from .image import imagetools
+    kernel.add_plugin(imagetools.plugin)
+
+    from .device import basedevice
     kernel.add_plugin(basedevice.plugin)
 
     from .core import elements
-
     kernel.add_plugin(elements.plugin)
 
     from .core import cutplanner
-
     kernel.add_plugin(cutplanner.plugin)
 
     from .device.lhystudios import lhystudiosdevice
-
     kernel.add_plugin(lhystudiosdevice.plugin)
 
     from .device.moshi import moshidevice
-
     kernel.add_plugin(moshidevice.plugin)
 
     from .core import svg_io
-
     kernel.add_plugin(svg_io.plugin)
 
     from .dxf import dxf_io
-
     kernel.add_plugin(dxf_io.plugin)
 
     if not args.no_gui:

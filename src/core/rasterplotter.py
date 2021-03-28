@@ -84,6 +84,8 @@ class RasterPlotter:
                     overscan *= self.width
             except ValueError:
                 pass
+        if step == 0:
+            step = 1
         self.overscan = round(overscan / float(step))
         self.offset_x = int(offset_x)
         self.offset_y = int(offset_y)
