@@ -140,7 +140,7 @@ class LhystudioController(Module):
         self._status = [0] * 6
         self._usb_state = -1
 
-        self.driver = None
+        self.ch341 = self.context.open("module/ch341")
         self.max_attempts = 5
         self.refuse_counts = 0
         self.connection_errors = 0
@@ -251,7 +251,7 @@ class LhystudioController(Module):
 
         @self.context.console_command("usb_disconnect", help="Disconnect USB")
         def usb_disconnect(command, channel, _, args=tuple(), **kwargs):
-            if self.driver is not None:
+            if self.ch341 is not None:
                 self.close()
             else:
                 channel("Usb is not connected.")
@@ -322,23 +322,23 @@ class LhystudioController(Module):
 
     def open(self):
         self.pipe_channel("open()")
-        if self.driver is None:
+        if self.ch341 is None:
             self.detect_driver_and_open()
         else:
             # Update criteria
-            self.driver.index = self.context.usb_index
-            self.driver.bus = self.context.usb_bus
-            self.driver.address = self.context.usb_address
-            self.driver.serial = self.context.usb_serial
-            self.driver.chipv = self.context.usb_version
-            self.driver.open()
-        if self.driver is None:
+            self.ch341.index = self.context.usb_index
+            self.ch341.bus = self.context.usb_bus
+            self.ch341.address = self.context.usb_address
+            self.ch341.serial = self.context.usb_serial
+            self.ch341.chipv = self.context.usb_version
+            self.ch341.open()
+        if self.ch341 is None:
             raise ConnectionRefusedError
 
     def close(self):
         self.pipe_channel("close()")
-        if self.driver is not None:
-            self.driver.close()
+        if self.ch341 is not None:
+            self.ch341.close()
 
     def write(self, bytes_to_write):
         """
@@ -436,67 +436,6 @@ class LhystudioController(Module):
     def stop(self):
         self.abort()
         self._thread.join()  # Wait until stop completes before continuing.
-
-    def detect_driver_and_open(self):
-        index = self.context.usb_index
-        bus = self.context.usb_bus
-        address = self.context.usb_address
-        serial = self.context.usb_serial
-        chipv = self.context.usb_version
-        _ = self.usb_log._
-
-        def state(state_value):
-            self.context.signal("pipe;state", state_value)
-
-        try:
-            from ..ch341libusbdriver import CH341Driver
-
-            self.driver = driver = CH341Driver(
-                index=index,
-                bus=bus,
-                address=address,
-                serial=serial,
-                chipv=chipv,
-                channel=self.usb_log,
-                state=state,
-            )
-            driver.open()
-            chip_version = driver.get_chip_version()
-            self.usb_log(_("CH341 Chip Version: %d") % chip_version)
-            self.context.signal("pipe;chipv", chip_version)
-            self.usb_log(_("Driver Detected: LibUsb"))
-            state("STATE_CONNECTED")
-            self.usb_log(_("Device Connected.\n"))
-            return
-        except ConnectionRefusedError:
-            self.driver = None
-        except ImportError:
-            self.usb_log(_("PyUsb is not installed. Skipping."))
-
-        try:
-            from ..ch341windlldriver import CH341Driver
-
-            self.driver = driver = CH341Driver(
-                index=index,
-                bus=bus,
-                address=address,
-                serial=serial,
-                chipv=chipv,
-                channel=self.usb_log,
-                state=state,
-            )
-            driver.open()
-            chip_version = driver.get_chip_version()
-            self.usb_log(_("CH341 Chip Version: %d") % chip_version)
-            self.context.signal("pipe;chipv", chip_version)
-            self.usb_log(_("Driver Detected: CH341"))
-            state("STATE_CONNECTED")
-            self.usb_log(_("Device Connected.\n"))
-            return
-        except ConnectionRefusedError:
-            self.driver = None
-        except ImportError:
-            self.usb_log(_("No Windll interfacing. Skipping."))
 
     def update_state(self, state):
         if state == self.state:
@@ -680,11 +619,7 @@ class LhystudioController(Module):
             return False  # Processing normal queue, PAUSE and BUSY apply.
 
         # Packet is prepared and ready to send. Open Channel.
-        if self.context.mock:
-            _ = self.usb_log._
-            self.usb_log(_("Using Mock Driver."))
-        else:
-            self.open()
+        self.open()
 
         if len(packet) == 30:
             # We have a sendable packet.
@@ -755,24 +690,12 @@ class LhystudioController(Module):
 
     def send_packet(self, packet):
         packet = b"\x00" + packet + bytes([onewire_crc_lookup(packet)])
-        if self.context.mock:
-            time.sleep(0.04)
-        else:
-            self.driver.write(packet)
+        self.ch341.write(packet)
         self.update_packet(packet)
         self.pre_ok = False
 
     def update_status(self):
-        if self.context.mock:
-            from random import randint
-
-            if randint(0, 500) == 0:
-                self._status = [255, STATUS_ERROR, 0, 0, 0, 1]
-            else:
-                self._status = [255, STATUS_OK, 0, 0, 0, 1]
-            time.sleep(0.01)
-        else:
-            self._status = self.driver.get_status()
+        self._status = self.ch341.get_status()
         if self.context is not None:
             self.context.signal(
                 "pipe;status", self._status, get_code_string_from_code(self._status[1])
@@ -809,8 +732,6 @@ class LhystudioController(Module):
             if self.state != STATE_WAIT:
                 self.update_state(STATE_WAIT)
             self.update_status()
-            if self.context.mock:  # Mock controller
-                self._status = [255, STATUS_FINISH, 0, 0, 0, 1]
             status = self._status[1]
             if status == 0:
                 raise ConnectionError
