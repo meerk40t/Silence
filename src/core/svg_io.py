@@ -1,6 +1,6 @@
 import os
 
-from svgelements import (SVG,  SVG_ATTR_TAG, SVG_TAG_TEXT, Color, Group, Path, Shape, SVGElement, SVGImage, SVGText)
+from svgelements import (SVG, Group, Path, Shape, SVGImage, SVGText)
 
 MILS_PER_MM = 39.3701
 
@@ -36,16 +36,12 @@ class SVGLoader:
             color="none",
             transform="scale(%f)" % scale_factor,
         )
-        context_node = elements_modifier.get(type="branch elems")
-        basename = os.path.basename(pathname)
-        file_node = context_node.add(type="file", name=basename)
-        file_node.filepath = pathname
         return SVGLoader.parse(
-            svg, elements_modifier, file_node, pathname, scale_factor
+            svg, elements_modifier, pathname
         )
 
     @staticmethod
-    def parse(svg, elements_modifier, context_node, pathname, scale_factor):
+    def parse(svg, elements_modifier, pathname):
         for element in svg:
             try:
                 if element.values["visibility"] == "hidden":
@@ -57,14 +53,22 @@ class SVGLoader:
             if isinstance(element, SVGText):
                 if element.text is None:
                     continue
-                context_node.add(element, type="elem")
-                elements_modifier.classify([element])
+                if element.stroke == "red":
+                    elements_modifier.cut_cutcode(element)
+                elif element.stroke == "blue":
+                    elements_modifier.engrave_cutcode(element)
+                else:
+                    elements_modifier.raster_cutcode(element)
             elif isinstance(element, Path):
                 if len(element) == 0:
                     continue
                 element.approximate_arcs_with_cubics()
-                context_node.add(element, type="elem")
-                elements_modifier.classify([element])
+                if element.stroke == "red":
+                    elements_modifier.cut_cutcode(element)
+                elif element.stroke == "blue":
+                    elements_modifier.engrave_cutcode(element)
+                else:
+                    elements_modifier.raster_cutcode(element)
             elif isinstance(element, Shape):
                 if not element.transform.is_identity():
                     # Shape Reification failed.
@@ -77,20 +81,22 @@ class SVGLoader:
                     e = Path(element)
                     if len(e) == 0:
                         continue  # Degenerate.
-                context_node.add(element, type="elem")
-                elements_modifier.classify([element])
+                if element.stroke == "red":
+                    elements_modifier.cut_cutcode(element)
+                elif element.stroke == "blue":
+                    elements_modifier.engrave_cutcode(element)
+                else:
+                    elements_modifier.raster_cutcode(element)
             elif isinstance(element, SVGImage):
                 try:
                     element.load(os.path.dirname(pathname))
                     if element.image is not None:
-                        context_node.add(element, type="elem")
-                        elements_modifier.classify([element])
+                        elements_modifier.raster_cutcode(element)
                 except OSError:
                     pass
             elif isinstance(element, SVG):
                 continue
             elif isinstance(element, Group):
-                new_context = context_node.add(type="group", name=element.id)
-                SVGLoader.parse(element, elements_modifier, new_context, pathname, scale_factor)
+                SVGLoader.parse(element, elements_modifier, pathname)
                 continue
         return True

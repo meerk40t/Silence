@@ -41,13 +41,6 @@ supported_languages = (
     ("zh", u"Chinese", wx.LANGUAGE_CHINESE),
 )
 
-
-def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
-    base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(base_path, relative_path)
-
-
 class Silence(MWindow):
     def __init__(self, *args, **kwds):
         super().__init__(815, 624, *args, **kwds)
@@ -464,6 +457,8 @@ class Silence(MWindow):
         )
         # end wxGlade
 
+        self.Bind(wx.EVT_DROP_FILES, self.on_drop_file)
+
         @self.context.console_command("refresh", help="Silence refresh")
         def refresh(command, channel, _, args=tuple(), **kwargs):
             self.Layout()
@@ -472,7 +467,20 @@ class Silence(MWindow):
             channel(_("Refreshed."))
             return
 
-        self.context.setting(str, "project", None)
+
+        @self.context.console_argument(
+            "filename",
+            type=str,
+            help="filename of design to load",
+        )
+        @self.context.console_command(
+            "design_load",
+            help="design_load <filename>",
+        )
+        def plan(command, channel, _, filename=None, args=tuple(), **kwargs):
+            self.tryopen(None)
+
+        self.context.setting(str, "working_file", None)
         self.context.setting(float, "jog_step", 10.0)
         self.context.setting(float, "move_x", 0.0)
         self.context.setting(float, "move_y", 0.0)
@@ -499,14 +507,90 @@ class Silence(MWindow):
         self.checkbox_rotary_enable.SetValue(self.context.rotary_enable)
         self.checkbox_group_vector.SetValue(self.context.group_vector)
         self.checkbox_group_engrave.SetValue(self.context.group_engrave)
-        self.text_raster_passes.SetValue(str(self.context.raster_settings.passes))
-        self.text_engrave_passes.SetValue(str(self.context.engrave_settings.passes))
-        self.text_cut_passes.SetValue(str(self.context.cut_settings.passes))
+        self.text_raster_passes.SetValue(str(self.context.raster_settings.implicit_passes))
+        self.text_engrave_passes.SetValue(str(self.context.engrave_settings.implicit_passes))
+        self.text_cut_passes.SetValue(str(self.context.cut_settings.implicit_passes))
         self.toggle_advance_settings()
 
         self.context.listen("rotary_enable", self.on_rotary_enable)
         self.context.listen("halftone", self.on_halftone)
         self.context.listen("op_setting_update", self.on_op_setting_update)
+
+    def load_or_open(self, filename):
+        """
+        Loads recent file name given. If the filename cannot be opened attempts open dialog at last known location.
+        """
+        if os.path.exists(filename):
+            try:
+                self.load(filename)
+            except PermissionError:
+                self.tryopen(filename)
+        else:
+            self.tryopen(filename)
+
+    def tryopen(self, filename):
+        """
+        Loads an open dialog at given filename to load data.
+        """
+        files = self.context.load_types()
+        if filename is not None:
+            defaultFile = os.path.basename(filename)
+            defaultDir = os.path.dirname(filename)
+        else:
+            defaultFile = ""
+            defaultDir = "."
+
+        with wx.FileDialog(
+                self, _("Open"), defaultDir=defaultDir, defaultFile=defaultFile, wildcard=files, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
+        ) as fileDialog:
+            fileDialog.SetFilename(defaultFile)
+            if fileDialog.ShowModal() == wx.ID_CANCEL:
+                return  # the user changed their mind
+            pathname = fileDialog.GetPath()
+            self.load(pathname)
+
+    def load(self, pathname):
+        self.context.setting(bool, "auto_note", True)
+        self.context.setting(bool, "uniform_svg", False)
+        self.context.setting(float, "svg_ppi", 96.0)
+        with wx.BusyInfo(_("Loading File...")):
+            results = self.context.load(
+                pathname,
+                channel=self.context.channel("load"),
+                svg_ppi=self.context.svg_ppi,
+            )
+            if results:
+                try:
+                    if self.context.uniform_svg and pathname.lower().endswith("svg"):
+                        self.context.working_file = pathname
+                except AttributeError:
+                    pass
+                return True
+            return False
+
+    def on_drop_file(self, event):
+        """
+        Drop file handler
+
+        Accepts multiple files drops.
+        """
+        accepted = 0
+        rejected = 0
+        rejected_files = []
+        for pathname in event.GetFiles():
+            if self.load(pathname):
+                accepted += 1
+            else:
+                rejected += 1
+                rejected_files.append(pathname)
+        if rejected != 0:
+            reject = "\n".join(rejected_files)
+            err_msg = _("Some files were unrecognized:\n%s") % reject
+            dlg = wx.MessageDialog(
+                None, err_msg, _("Error encountered"), wx.OK | wx.ICON_ERROR
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
 
     def on_halftone(self, *args, **kwargs):
         self.checkbox_halftone.SetValue(self.context.halftone)
@@ -515,9 +599,9 @@ class Silence(MWindow):
         self.checkbox_rotary_enable.SetValue(self.context.rotary_enable)
 
     def on_op_setting_update(self, *args, **kwargs):
-        self.text_raster_passes.SetValue(str(self.context.raster_settings.passes))
-        self.text_engrave_passes.SetValue(str(self.context.engrave_settings.passes))
-        self.text_cut_passes.SetValue(str(self.context.cut_settings.passes))
+        self.text_raster_passes.SetValue(str(self.context.raster_settings.implicit_passes))
+        self.text_engrave_passes.SetValue(str(self.context.engrave_settings.implicit_passes))
+        self.text_cut_passes.SetValue(str(self.context.cut_settings.implicit_passes))
         self.text_raster_speed.SetValue(str(self.context.raster_settings.speed))
         self.text_engrave_speed.SetValue(str(self.context.engrave_settings.speed))
         self.text_cut_speed.SetValue(str(self.context.cut_settings.speed))
@@ -825,10 +909,11 @@ class Silence(MWindow):
         self.context.console("settings_load\n")
 
     def on_menu_open(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.console("project_open\n")
+        self.context.console("design_load\n")
 
     def on_menu_reload(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.console("project_reload\n")
+        if self.context.working_file is not None:
+            self.context.console("design_load %s\n" % self.context.working_file)
 
     def on_menu_egv(self, event):  # wxGlade: Silence.<event_handler>
         self.context.console("egv_load\n")
@@ -903,8 +988,8 @@ class Silence(MWindow):
         self.context.console("design_load\n")
 
     def on_button_reload_design(self, event):  # wxGlade: Silence.<event_handler>
-        if self.context.project is not None:
-            self.context.console("design_load %s\n" % self.context.project)
+        if self.context.working_file is not None:
+            self.context.console("design_load %s\n" % self.context.working_file)
 
     def on_button_home(self, event):  # wxGlade: Silence.<event_handler>
         self.context.console("home\n")
@@ -963,7 +1048,7 @@ class Silence(MWindow):
             pass
 
     def on_button_raster_engrave(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.console("execute raster\n")
+        self.context.console("raster execute\n")
 
     def on_text_raster_speed(self, event):  # wxGlade: Silence.<event_handler>
         try:
@@ -972,7 +1057,7 @@ class Silence(MWindow):
             pass
 
     def on_button_vector_engrave(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.console("execute engrave\n")
+        self.context.console("engrave execute\n")
 
     def on_text_engrave_speed(self, event):  # wxGlade: Silence.<event_handler>
         try:
@@ -981,7 +1066,7 @@ class Silence(MWindow):
             pass
 
     def on_button_vector_cut(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.console("execute cut\n")
+        self.context.console("cut execute\n")
 
     def on_text_cut_speed(self, event):  # wxGlade: Silence.<event_handler>
         try:
@@ -2086,7 +2171,21 @@ class SilenceApp(wx.App, Module):
 
     def initialize(self, *args, **kwargs):
         context = self.context
-        wx.Locale.AddCatalogLookupPathPrefix(resource_path("locale"))
+
+        try:  # pyinstaller internal location
+            _resource_path = os.path.join(sys._MEIPASS, 'locale')
+            wx.Locale.AddCatalogLookupPathPrefix(_resource_path)
+        except Exception:
+            pass
+
+        try:  # Mac py2app resource
+            _resource_path = os.path.join(os.environ['RESOURCEPATH'], 'locale')
+            wx.Locale.AddCatalogLookupPathPrefix(_resource_path)
+        except Exception:
+            pass
+
+        wx.Locale.AddCatalogLookupPathPrefix('locale')  # Default Locale, prepended. Check this first.
+
         context._kernel.run_later = self.run_later
         context._kernel.translation = wx.GetTranslation
         context._kernel.set_config(wx.Config(context._kernel.profile))

@@ -1,7 +1,8 @@
-from svgelements import Color, SVGImage, SVGText
+
+from svgelements import Color, SVGImage, Path, Polygon, Move, Close, Line, QuadraticBezier, CubicBezier, Arc
 
 from ..kernel import Modifier
-from .cutcode import CutCode, LaserSettings
+from .cutcode import CutCode, LaserSettings, LineCut, QuadCut, CubicCut, ArcCut, RasterCut
 
 
 def plugin(kernel, lifecycle=None):
@@ -28,6 +29,113 @@ class ElementCore(Modifier):
             operation="Raster", color="black", speed=140.0
         )
 
+    def engrave_cutcode(self, objects):
+        c = self.engrave
+        settings = self.engrave_settings
+        self._vector_cutcode(c, settings, objects)
+
+    def cut_cutcode(self, objects):
+        c = self.cut
+        settings = self.cut_settings
+        self._vector_cutcode(c, settings, objects)
+
+    def image_cutcode(self, objects):
+        c = self.raster
+        settings = self.raster_settings
+        for object_image in objects:
+            settings = LaserSettings(settings)
+            try:
+                settings.raster_step = int(object_image.values["raster_step"])
+            except KeyError:
+                settings.raster_step = 1
+            direction = settings.raster_direction
+            settings.crosshatch = False
+            if direction == 4:
+                cross_settings = LaserSettings(settings)
+                cross_settings.crosshatch = True
+                c.append(RasterCut(object_image, settings))
+                c.append(RasterCut(object_image, cross_settings))
+            else:
+                c.append(RasterCut(object_image, settings))
+        if settings.passes_custom:
+            c *= settings.passes
+        if len(c) == 0:
+            return None
+        return c
+
+    def raster_cutcode(self, objects):
+        c = self.raster
+        settings = self.raster_settings
+        direction = settings.raster_direction
+        settings.crosshatch = False
+        if direction == 4:
+            cross_settings = LaserSettings(settings)
+            cross_settings.crosshatch = True
+            for object_image in objects:
+                if not isinstance(object_image, SVGImage):
+                    continue
+                c.append(RasterCut(object_image, settings))
+                c.append(RasterCut(object_image, cross_settings))
+        else:
+            for object_image in objects:
+                if not isinstance(object_image, SVGImage):
+                    continue
+                c.append(RasterCut(object_image, settings))
+        if settings.passes_custom:
+            c *= settings.passes
+        if len(c) == 0:
+            return None
+        return c
+
+    def _vector_cutcode(self, c, settings, objects):
+        # TODO: This won't quite work as we're adding to the static c object in elements.
+        for object_path in objects:
+            if isinstance(object_path, SVGImage):
+                box = object_path.bbox()
+                plot = Path(
+                        Polygon(
+                            (box[0], box[1]),
+                            (box[0], box[3]),
+                            (box[2], box[3]),
+                            (box[2], box[1]),
+                            )
+                        )
+            else:
+                # Is a shape or path.
+                if not isinstance(object_path, Path):
+                    plot = abs(Path(object_path))
+                else:
+                    plot = abs(object_path)
+            for seg in plot:
+                if isinstance(seg, Move):
+                    pass  # Move operations are ignored.
+                elif isinstance(seg, Close):
+                    c.append(LineCut(seg.start, seg.end, settings=settings))
+                elif isinstance(seg, Line):
+                    c.append(LineCut(seg.start, seg.end, settings=settings))
+                elif isinstance(seg, QuadraticBezier):
+                    c.append(
+                        QuadCut(seg.start, seg.control, seg.end, settings=settings)
+                    )
+                elif isinstance(seg, CubicBezier):
+                    c.append(
+                        CubicCut(
+                            seg.start,
+                            seg.control1,
+                            seg.control2,
+                            seg.end,
+                            settings=settings,
+                        )
+                    )
+                elif isinstance(seg, Arc):
+                    arc = ArcCut(seg, settings=settings)
+                    c.append(arc)
+        if settings.passes_custom:
+            c *= settings.passes
+        if len(c) == 0:
+            return None
+        return c
+
     def attach(self, *a, **kwargs):
         context = self.context
         context.elements = self
@@ -42,22 +150,20 @@ class ElementCore(Modifier):
         context.cut_settings = self.cut_settings
         context.raster_settings = self.raster_settings
 
-        @self.context.console_argument(
-            "op",
-            type=str,
-            help="operation to execute",
-        )
         @self.context.console_command(
-            "execute",
-            help="execute <operation>",
+            ("cut", "engrave", "raster"),
+            help="operation<?> <setting> <value>",
+            output_type="op"
         )
-        def plan(command, channel, _, op=None, args=tuple(), **kwargs):
-            if op == "engrave":
-                self.context.get_context('/').spooler.job(self.engrave)
-            elif op == "cut":
-                self.context.get_context('/').spooler.job(self.cut)
-            elif op == "raster":
-                self.context.get_context('/').spooler.job(self.raster)
+        def op_init(command, channel, _, setting=None, value=None, args=tuple(), **kwargs):
+            if command == "engrave":
+                return "op", ("engrave", self.engrave, self.engrave_settings)
+            elif command == "cut":
+                return "op", ("cut", self.cut, self.cut_settings)
+            elif command == "raster":
+                return "op", ("raster", self.raster, self.raster_settings)
+            else:
+                raise ValueError
 
         @self.context.console_argument(
             "setting",
@@ -70,29 +176,64 @@ class ElementCore(Modifier):
             help="value",
         )
         @self.context.console_command(
-            ("cut", "engrave", "raster"),
-            help="operation<?> <setting> <value>",
+            "set",
+            help="set <setting> <value>",
+            output_type="op",
+            input_type="op"
         )
-        def plan(command, channel, _, setting, value, args=tuple(), **kwargs):
-
-            if command == "engrave":
-                s = self.engrave_settings
-            elif command == "cut":
-                s = self.cut_settings
-            elif command == "raster":
-                s = self.raster_settings
-            else:
-                raise ValueError
+        def op_set(channel, _, data=None, setting=None, value=None, **kwargs):
+            name, cutcode, op_set = data
+            if setting is None:
+                channel(_("%s Settings:" % name))
+                for setv in dir(op_set):
+                    if setv.startswith('_') or setv.startswith('implicit'):
+                        continue
+                    v = getattr(op_set,setv)
+                    if not isinstance(v, (int,float,str,complex,Color)):
+                        continue
+                    channel("%s=%s" % (setv, str(v)))
+                return
             try:
-                v = getattr(s, setting)
+                v = getattr(op_set, setting)
             except AttributeError:
                 return
             if v is None:
                 return
             t = type(v)
-            setattr(s, setting, t(value))
-            channel(_("Set %s setting %s from %s to %s.") % (command, setting, str(v), value))
-            self.context.signal("op_setting_update", command)
+            setattr(op_set, setting, t(value))
+            channel(_("%s: '%s' from %s to %s.") % (name, setting, str(v), value))
+            self.context.signal("op_setting_update", name)
+            return "op", data
+
+        @self.context.console_command(
+            "execute",
+            help="<op> execute",
+            input_type="op",
+            output_type="op",
+        )
+        def op_execute(channel, _, data=None, **kwargs):
+            if data is None:
+                channel(_("Nothing to Execute"))
+                return
+            name, cutcode, op_set = data
+            self.context.get_context('/').spooler.job(cutcode)
+            return "op", data
+
+        @self.context.console_command(
+            "list",
+            help="<op> list",
+            input_type="op",
+            output_type="op",
+        )
+        def op_list(channel, _, data=None, **kwargs):
+            if data is None:
+                channel(_("Nothing to list"))
+                return
+            name, cutcode, op_set = data
+            channel(_("%s Objects:" % name))
+            for code in cutcode:
+                channel(str(code))
+            return "op", data
 
     def detach(self, *a, **kwargs):
         context = self.context
