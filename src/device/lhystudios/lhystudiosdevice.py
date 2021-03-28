@@ -1,5 +1,4 @@
 from svgelements import Length
-
 from ...kernel import STATE_UNKNOWN, Modifier
 from ..lasercommandconstants import *
 from .lhymicrointerpreter import LhymicroInterpreter
@@ -22,7 +21,6 @@ The device is primary composed of three main modules.
 * A spooler which is a generic device object that queues up device-agnostic Lasercode commands.
 * An interpreter which takes lasercode and converts converts that data into laser states and lhymicro-gl code commands.
 * A controller which deals with sending the specific code objects to the hardware device, in an acceptable protocol.
-
 """
 
 

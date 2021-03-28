@@ -1,11 +1,19 @@
 from ...core.plotplanner import PlotPlanner
 from ...kernel import Modifier
-from ..basedevice import (INTERPRETER_STATE_FINISH,
-                          INTERPRETER_STATE_MODECHANGE,
-                          INTERPRETER_STATE_PROGRAM, INTERPRETER_STATE_RAPID,
-                          INTERPRETER_STATE_RASTER, PLOT_AXIS, PLOT_DIRECTION,
-                          PLOT_FINISH, PLOT_JOG, PLOT_RAPID, PLOT_SETTING,
-                          Interpreter)
+from ..basedevice import (
+    INTERPRETER_STATE_FINISH,
+    INTERPRETER_STATE_MODECHANGE,
+    INTERPRETER_STATE_PROGRAM,
+    INTERPRETER_STATE_RAPID,
+    INTERPRETER_STATE_RASTER,
+    PLOT_AXIS,
+    PLOT_DIRECTION,
+    PLOT_FINISH,
+    PLOT_JOG,
+    PLOT_RAPID,
+    PLOT_SETTING,
+    Interpreter,
+)
 from .moshiconstants import swizzle_table
 
 

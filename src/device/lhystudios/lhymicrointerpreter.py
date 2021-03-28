@@ -1,11 +1,19 @@
 from ...core.plotplanner import PlotPlanner
 from ...core.zinglplotter import ZinglPlotter
 from ...kernel import Modifier
-from ..basedevice import (INTERPRETER_STATE_FINISH,
-                          INTERPRETER_STATE_MODECHANGE,
-                          INTERPRETER_STATE_PROGRAM, INTERPRETER_STATE_RAPID,
-                          PLOT_AXIS, PLOT_DIRECTION, PLOT_FINISH, PLOT_JOG,
-                          PLOT_RAPID, PLOT_SETTING, Interpreter)
+from ..basedevice import (
+    INTERPRETER_STATE_FINISH,
+    INTERPRETER_STATE_MODECHANGE,
+    INTERPRETER_STATE_PROGRAM,
+    INTERPRETER_STATE_RAPID,
+    PLOT_AXIS,
+    PLOT_DIRECTION,
+    PLOT_FINISH,
+    PLOT_JOG,
+    PLOT_RAPID,
+    PLOT_SETTING,
+    Interpreter,
+)
 from ..lasercommandconstants import *
 from .laserspeed import LaserSpeed
 
@@ -247,7 +255,7 @@ class LhymicroInterpreter(Interpreter, Modifier):
             else:
                 self.pause()
 
-        @self.context.console_command("abort", help="Abort Job")
+        @self.context.console_command(("estop", "abort"), help="Abort Job")
         def pipe_abort(command, channel, _, args=tuple(), **kwargs):
             self.reset()
             channel("Lhystudios Channel Aborted.")
@@ -875,8 +883,8 @@ class LhymicroInterpreter(Interpreter, Modifier):
         x, y = self.calc_home_position()
         self.ensure_rapid_mode()
         self.pipe(b"IPP\n")
-        old_x = self.context.current_x
-        old_y = self.context.current_y
+        # old_x = self.context.current_x
+        # old_y = self.context.current_y
         self.context.current_x = x
         self.context.current_y = y
         self.reset_modes()

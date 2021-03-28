@@ -1,9 +1,18 @@
 import threading
 import time
 
-from ...kernel import (STATE_ACTIVE, STATE_BUSY, STATE_END, STATE_IDLE,
-                       STATE_INITIALIZE, STATE_PAUSE, STATE_TERMINATE,
-                       STATE_UNKNOWN, STATE_WAIT, Module)
+from ...kernel import (
+    STATE_ACTIVE,
+    STATE_BUSY,
+    STATE_END,
+    STATE_IDLE,
+    STATE_INITIALIZE,
+    STATE_PAUSE,
+    STATE_TERMINATE,
+    STATE_UNKNOWN,
+    STATE_WAIT,
+    Module,
+)
 
 
 def convert_to_list_bytes(data):
@@ -141,6 +150,7 @@ class LhystudioController(Module):
         self._usb_state = -1
 
         self.ch341 = self.context.open("module/ch341")
+        self.connection = None
         self.max_attempts = 5
         self.refuse_counts = 0
         self.connection_errors = 0
@@ -251,7 +261,7 @@ class LhystudioController(Module):
 
         @self.context.console_command("usb_disconnect", help="Disconnect USB")
         def usb_disconnect(command, channel, _, args=tuple(), **kwargs):
-            if self.ch341 is not None:
+            if self.connection is not None:
                 self.close()
             else:
                 channel("Usb is not connected.")
@@ -274,11 +284,19 @@ class LhystudioController(Module):
             self.start()
             channel("Lhystudios Channel Resumed.")
 
+        @self.context.console_command("usb_connect", help="Connects USB")
+        def usb_connect(command, channel, _, args=tuple(), **kwargs):
+            self.open()
+            channel("CH341 Opened.")
+
+        @self.context.console_command("usb_disconnect", help="Disconnects USB")
+        def usb_disconnect(command, channel, _, args=tuple(), **kwargs):
+            self.close()
+            channel("CH341 Opened.")
+
         context.setting(int, "packet_count", 0)
         context.setting(int, "rejected_count", 0)
 
-        context.register("control/Connect_USB", self.open)
-        context.register("control/Disconnect_USB", self.close)
         context.register("control/Status Update", self.update_status)
         self.reset()
 
@@ -322,23 +340,25 @@ class LhystudioController(Module):
 
     def open(self):
         self.pipe_channel("open()")
-        if self.ch341 is None:
-            self.detect_driver_and_open()
+        if self.connection is None:
+            self.connection = self.ch341.connect(
+                driver_index=self.context.usb_index,
+                chipv=self.context.usb_version,
+                bus=self.context.usb_bus,
+                address=self.context.usb_address,
+                mock=self.context.mock,
+            )
         else:
-            # Update criteria
-            self.ch341.index = self.context.usb_index
-            self.ch341.bus = self.context.usb_bus
-            self.ch341.address = self.context.usb_address
-            self.ch341.serial = self.context.usb_serial
-            self.ch341.chipv = self.context.usb_version
-            self.ch341.open()
-        if self.ch341 is None:
+            self.connection.open()
+
+        if self.connection is None:
             raise ConnectionRefusedError
 
     def close(self):
         self.pipe_channel("close()")
-        if self.ch341 is not None:
-            self.ch341.close()
+        if self.connection is not None:
+            self.connection.close()
+            self.connection = None
 
     def write(self, bytes_to_write):
         """
@@ -690,12 +710,12 @@ class LhystudioController(Module):
 
     def send_packet(self, packet):
         packet = b"\x00" + packet + bytes([onewire_crc_lookup(packet)])
-        self.ch341.write(packet)
+        self.connection.write(packet)
         self.update_packet(packet)
         self.pre_ok = False
 
     def update_status(self):
-        self._status = self.ch341.get_status()
+        self._status = self.connection.get_status()
         if self.context is not None:
             self.context.signal(
                 "pipe;status", self._status, get_code_string_from_code(self._status[1])

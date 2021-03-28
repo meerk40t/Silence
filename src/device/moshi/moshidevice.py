@@ -1,5 +1,4 @@
 from svgelements import Length
-
 from ...kernel import STATE_UNKNOWN, Modifier
 from ..lasercommandconstants import *
 from .moshicontroller import MoshiController
