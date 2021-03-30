@@ -111,7 +111,7 @@ class MoshiController(Module):
             self.start()
             channel("Moshi Channel Resumed.")
 
-        @self.context.console_command("abort", help="Abort Job")
+        @self.context.console_command(("estop", "abort"), help="Abort Job")
         def pipe_abort(command, channel, _, args=tuple(), **kwargs):
             self.reset()
             channel("Moshi Channel Aborted.")
