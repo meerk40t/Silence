@@ -111,7 +111,7 @@ class MoshiController(Module):
             self.start()
             channel("Moshi Channel Resumed.")
 
-        @self.context.console_command(("estop", "abort"), help="Abort Job")
+        @self.context.console_command("abort", help="Abort Job")
         def pipe_abort(command, channel, _, args=tuple(), **kwargs):
             self.reset()
             channel("Moshi Channel Aborted.")
@@ -197,6 +197,9 @@ class MoshiController(Module):
                 address=self.context.usb_address,
                 mock=self.context.mock,
             )
+            if self.context.mock:
+                self.connection.mock_status = 205
+                self.connection.mock_finish = 207
         else:
             self.connection.open()
         if self.connection is None:
@@ -422,6 +425,8 @@ class MoshiController(Module):
         self.update_packet(packet)
 
     def update_status(self):
+        if self.connection is None:
+            raise ConnectionError
         self._status = self.connection.get_status()
         if self.context is not None:
             self.context.signal(
