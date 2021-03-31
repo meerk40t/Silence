@@ -618,10 +618,12 @@ class Silence(MWindow, Job):
             self.load(pathname)
 
     def load(self, pathname):
-        self.context.setting(bool, "auto_note", True)
         self.context.setting(bool, "uniform_svg", False)
         self.context.setting(float, "svg_ppi", 96.0)
+        self.context("raster clear\ncut clear\nengrave clear\n")
         with wx.BusyInfo(_("Loading File...")):
+            if pathname.endswith("png"):
+                pass
             results = self.context.load(
                 pathname,
                 channel=self.context.channel("load"),

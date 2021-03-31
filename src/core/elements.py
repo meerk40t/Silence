@@ -259,6 +259,17 @@ class ElementCore(Modifier):
                 channel(str(code))
             return "op", data
 
+        @self.context.console_command(
+            "clear",
+            help="<op> clear",
+            input_type="op",
+            output_type="op",
+        )
+        def op_clear(channel, _, data=None, **kwargs):
+            name, cutcode, op_set = data
+            cutcode.clear()
+            return "op", data
+
     def detach(self, *a, **kwargs):
         context = self.context
         settings = context.derive("settings")
