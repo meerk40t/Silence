@@ -119,6 +119,17 @@ def plugin(kernel, lifecycle=None):
             channel(_("Device at context '%s' activated" % data._path))
             return "device", data
 
+        @context.console_command(
+            "start",
+            help="start device",
+            input_type="device",
+            output_type="device",
+        )
+        def activate(channel, _, data, **kwargs):
+            data.start()
+            channel(_("Device at context '%s' activated" % data._path))
+            return "device", data
+
         @context.console_argument("device", help="Device to initialize...")
         @context.console_command(
             "init",

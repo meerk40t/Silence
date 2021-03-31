@@ -36,9 +36,6 @@ class LhystudiosDevice(Modifier):
         self.state = STATE_UNKNOWN
         self.dx = 0
         self.dy = 0
-        self.bed_dim = context.get_context("/")
-        self.bed_dim.setting(int, "bed_width", 310)
-        self.bed_dim.setting(int, "bed_height", 210)
 
     def __repr__(self):
         return "LhystudiosDevice()"
@@ -80,7 +77,6 @@ class LhystudiosDevice(Modifier):
         context.activate("modifier/Spooler")
 
         context.listen("interpreter;mode", self.on_mode_change)
-        context.signal("bed_size", (self.bed_dim.bed_width, self.bed_dim.bed_height))
 
     def detach(self, *args, **kwargs):
         self.context.unlisten("interpreter;mode", self.on_mode_change)
