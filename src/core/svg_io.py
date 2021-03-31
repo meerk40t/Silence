@@ -64,11 +64,11 @@ class SVGLoader:
                     continue
                 element.approximate_arcs_with_cubics()
                 if element.stroke == "red":
-                    elements_modifier.cut_cutcode(element)
+                    elements_modifier.cut_cutcode(abs(element))
                 elif element.stroke == "blue":
-                    elements_modifier.engrave_cutcode(element)
+                    elements_modifier.engrave_cutcode(abs(element))
                 else:
-                    elements_modifier.raster_cutcode(element)
+                    elements_modifier.raster_cutcode(abs(element))
             elif isinstance(element, Shape):
                 if not element.transform.is_identity():
                     # Shape Reification failed.
@@ -82,16 +82,16 @@ class SVGLoader:
                     if len(e) == 0:
                         continue  # Degenerate.
                 if element.stroke == "red":
-                    elements_modifier.cut_cutcode(element)
+                    elements_modifier.cut_cutcode(abs(Path(element)))
                 elif element.stroke == "blue":
-                    elements_modifier.engrave_cutcode(element)
+                    elements_modifier.engrave_cutcode(abs(Path(element)))
                 else:
-                    elements_modifier.raster_cutcode(element)
+                    elements_modifier.raster_cutcode(abs(Path(element)))
             elif isinstance(element, SVGImage):
                 try:
                     element.load(os.path.dirname(pathname))
                     if element.image is not None:
-                        elements_modifier.raster_cutcode(element)
+                        elements_modifier.raster_cutcode(abs(element))
                 except OSError:
                     pass
             elif isinstance(element, SVG):
