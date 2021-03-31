@@ -5,6 +5,7 @@
 #
 import os
 import sys
+import threading
 
 import wx
 
@@ -13,8 +14,37 @@ from src.gui.icons import (icon_CC, icon_down, icon_left, icon_LL, icon_LR,
 from src.gui.mwindow import MWindow
 from src.gui.rasterwizard import RasterWizard
 from src.gui.terminal import Terminal
-from src.kernel import Module
+from src.kernel import Module, Job
 
+from .widget import (
+    ElementsWidget,
+    GridWidget,
+    GuideWidget,
+    Scene,
+    SelectionWidget,
+)
+from .laserrender import (
+    DRAW_MODE_ANIMATE,
+    DRAW_MODE_BACKGROUND,
+    DRAW_MODE_CACHE,
+    DRAW_MODE_FILLS,
+    DRAW_MODE_FLIPXY,
+    DRAW_MODE_GRID,
+    DRAW_MODE_GUIDES,
+    DRAW_MODE_ICONS,
+    DRAW_MODE_IMAGE,
+    DRAW_MODE_INVERT,
+    DRAW_MODE_LASERPATH,
+    DRAW_MODE_PATH,
+    DRAW_MODE_REFRESH,
+    DRAW_MODE_RETICLE,
+    DRAW_MODE_SELECTION,
+    DRAW_MODE_STROKES,
+    DRAW_MODE_TEXT,
+    DRAW_MODE_TREE,
+    LaserRender,
+    swizzlecolor,
+)
 MILS_IN_MM = 39.3701
 
 
@@ -41,9 +71,23 @@ supported_languages = (
     ("zh", u"Chinese", wx.LANGUAGE_CHINESE),
 )
 
-class Silence(MWindow):
+
+class Silence(MWindow, Job):
     def __init__(self, *args, **kwds):
         super().__init__(815, 624, *args, **kwds)
+        Job.__init__(self, job_name="refresh_scene", process=self.refresh_scene, interval=0.05)
+        self.context.setting(int, "draw_mode", 0)
+        self.context.setting(float, "units_convert", MILS_IN_MM)
+        self.context.setting(str, "units_name", "mm")
+        self.context.setting(int, "units_marks", 10)
+        self.context.setting(int, "units_index", 0)
+        self._Buffer = None
+
+        self.widget_scene = self.root_context.open("module/Scene")
+        self.screen_refresh_is_requested = False
+        self.screen_refresh_is_running = False
+        self.screen_refresh_lock = threading.Lock()
+        self.background_brush = wx.Brush("Grey")
 
         # Menu Bar
         self.silence_menubar = wx.MenuBar()
@@ -396,10 +440,43 @@ class Silence(MWindow):
         self.button_hide_advanced = wx.Button(
             self.advanced_settings, wx.ID_ANY, "Hide Advanced"
         )
-        self.main_view_panel = wx.Panel(self, wx.ID_ANY)
+        self.scene = wx.Panel(self, style=wx.EXPAND | wx.WANTS_CHARS)
+        self.scene.SetDoubleBuffered(True)
 
         self.__set_properties()
         self.__do_layout()
+
+        self.scene.Bind(wx.EVT_PAINT, self.on_paint)
+        self.scene.Bind(wx.EVT_ERASE_BACKGROUND, self.on_erase)
+
+        self.scene.Bind(wx.EVT_MOTION, self.on_mouse_move)
+
+        self.scene.Bind(wx.EVT_MOUSEWHEEL, self.on_mousewheel)
+
+        self.scene.Bind(wx.EVT_MIDDLE_DOWN, self.on_mouse_middle_down)
+        self.scene.Bind(wx.EVT_MIDDLE_UP, self.on_mouse_middle_up)
+
+        self.scene.Bind(wx.EVT_LEFT_DCLICK, self.on_mouse_double_click)
+
+        self.scene.Bind(wx.EVT_RIGHT_DOWN, self.on_right_mouse_down)
+        self.scene.Bind(wx.EVT_RIGHT_UP, self.on_right_mouse_up)
+
+        self.scene.Bind(wx.EVT_LEFT_DOWN, self.on_left_mouse_down)
+        self.scene.Bind(wx.EVT_LEFT_UP, self.on_left_mouse_up)
+
+        self.widget_scene.add_scenewidget(GridWidget(self.widget_scene))
+        self.widget_scene.add_interfacewidget(GuideWidget(self.widget_scene))
+
+        try:
+            self.scene.Bind(wx.EVT_MAGNIFY, self.on_magnify_mouse)
+            self.EnableTouchEvents(wx.TOUCH_ZOOM_GESTURE | wx.TOUCH_PAN_GESTURES)
+            self.scene.Bind(wx.EVT_GESTURE_PAN, self.on_gesture)
+            self.scene.Bind(wx.EVT_GESTURE_ZOOM, self.on_gesture)
+        except AttributeError:
+            # Not WX 4.1
+            pass
+
+        self.scene.SetFocus()
 
         self.Bind(wx.EVT_BUTTON, self.on_button_initialize_laser, self.button_usb_init)
         self.Bind(wx.EVT_BUTTON, self.on_button_open_design, self.button_design_open)
@@ -456,6 +533,8 @@ class Silence(MWindow):
             wx.EVT_BUTTON, self.on_button_hide_advanced, self.button_hide_advanced
         )
         # end wxGlade
+
+        self.Bind(wx.EVT_SIZE, self.on_size)
 
         self.Bind(wx.EVT_DROP_FILES, self.on_drop_file)
 
@@ -515,6 +594,17 @@ class Silence(MWindow):
         self.context.listen("rotary_enable", self.on_rotary_enable)
         self.context.listen("halftone", self.on_halftone)
         self.context.listen("op_setting_update", self.on_op_setting_update)
+        self.context.listen("refresh_scene", self.on_refresh_scene)
+
+        bed_dim = self.context.get_context("/")
+        bed_dim.setting(int, "bed_width", 310)
+        bed_dim.setting(int, "bed_height", 210)
+        bbox = (0, 0, bed_dim.bed_width * MILS_IN_MM, bed_dim.bed_height * MILS_IN_MM)
+        self.widget_scene.widget_root.focus_viewport_scene(
+            bbox, self.scene.ClientSize, 0.1
+        )
+
+        self.context.schedule(self)
 
     def load_or_open(self, filename):
         """
@@ -748,7 +838,7 @@ class Silence(MWindow):
         self.button_hide_advanced.SetToolTip(
             "Button to hide the advanced options pane."
         )
-        self.main_view_panel.SetBackgroundColour(wx.Colour(192, 192, 192))
+        self.scene.SetBackgroundColour(wx.Colour(192, 192, 192))
         # end wxGlade
 
     def __do_layout(self):
@@ -889,7 +979,7 @@ class Silence(MWindow):
         sizer_20.Add(sizer_19, 0, 0, 0)
         self.advanced_settings.SetSizer(sizer_20)
         sizer_1.Add(self.advanced_settings, 1, wx.EXPAND, 0)
-        sizer_1.Add(self.main_view_panel, 5, wx.EXPAND, 0)
+        sizer_1.Add(self.scene, 5, wx.EXPAND, 0)
         self.SetSizer(sizer_1)
         self.Layout()
         # end wxGlade
@@ -1126,6 +1216,210 @@ class Silence(MWindow):
 
     def on_button_hide_advanced(self, event):  # wxGlade: Silence.<event_handler>
         self.toggle_advance_settings()
+
+    # Scene information
+
+    def on_size(self, event):
+        if self.context is None:
+            return
+        self.Layout()
+        self.widget_scene.signal("guide")
+        self.request_refresh()
+
+    def set_buffer(self):
+        width, height = self.scene.ClientSize
+        if width <= 0:
+            width = 1
+        if height <= 0:
+            height = 1
+        self._Buffer = wx.Bitmap(width, height)
+
+    def on_paint(self, event):
+        try:
+            if self._Buffer is None:
+                self.update_buffer_ui_thread()
+            wx.BufferedPaintDC(self.scene, self._Buffer)
+        except RuntimeError:
+            pass
+
+    def on_refresh_scene(self, *args):
+        """
+        Called by 'refresh_scene' change. To refresh tree.
+
+        :param args:
+        :return:
+        """
+        self.request_refresh()
+
+    def on_erase(self, event):
+        pass
+
+    def request_refresh_for_animation(self):
+        """Called on the various signals trying to animate the screen."""
+        try:
+            if self.context.draw_mode & DRAW_MODE_ANIMATE == 0:
+                self.request_refresh()
+        except AttributeError:
+            pass
+
+    def request_refresh(self):
+        """Request an update to the scene."""
+        try:
+            if self.context.draw_mode & DRAW_MODE_REFRESH == 0:
+                self.screen_refresh_is_requested = True
+        except AttributeError:
+            pass
+
+    def refresh_scene(self):
+        """Called by the Scheduler at a given the specified framerate."""
+        if self.screen_refresh_is_requested and not self.screen_refresh_is_running:
+            self.screen_refresh_is_running = True
+            if self.screen_refresh_lock.acquire(timeout=1):
+                if not wx.IsMainThread():
+                    wx.CallAfter(self._refresh_in_ui)
+                else:
+                    self._refresh_in_ui()
+            else:
+                self.screen_refresh_is_requested = False
+                self.screen_refresh_is_running = False
+
+    def _refresh_in_ui(self):
+        """Called by refresh_scene() in the UI thread."""
+        if self.context is None:
+            return
+        self.update_buffer_ui_thread()
+        self.scene.Refresh()
+        self.scene.Update()
+        self.screen_refresh_is_requested = False
+        self.screen_refresh_is_running = False
+        self.screen_refresh_lock.release()
+
+    def update_buffer_ui_thread(self):
+        """Performs the redraw of the data in the UI thread."""
+        dm = self.context.draw_mode
+        if self._Buffer is None or self._Buffer.GetSize() != self.scene.ClientSize:
+            self.set_buffer()
+        dc = wx.MemoryDC()
+        dc.SelectObject(self._Buffer)
+        dc.SetBackground(self.background_brush)
+        dc.Clear()
+        w, h = dc.Size
+        if dm & DRAW_MODE_FLIPXY != 0:
+            dc.SetUserScale(-1, -1)
+            dc.SetLogicalOrigin(w, h)
+        gc = wx.GraphicsContext.Create(dc)
+        gc.Size = dc.Size
+
+        # gc.laserpath = self.laserpath
+        font = wx.Font(14, wx.SWISS, wx.NORMAL, wx.BOLD)
+        gc.SetFont(font, wx.BLACK)
+        if self.widget_scene is not None:
+            self.widget_scene.draw(gc)
+        if dm & DRAW_MODE_INVERT != 0:
+            dc.Blit(0, 0, w, h, dc, 0, 0, wx.SRC_INVERT)
+        gc.Destroy()
+        del dc
+
+    # Mouse Events.
+
+    def on_mousewheel(self, event):
+        if self.scene.HasCapture():
+            return
+        rotation = event.GetWheelRotation()
+        if event.GetWheelAxis() == wx.MOUSE_WHEEL_VERTICAL and not event.ShiftDown():
+            if event.HasAnyModifiers():
+                if rotation > 1:
+                    self.widget_scene.event(event.GetPosition(), "wheelup_ctrl")
+                elif rotation < -1:
+                    self.widget_scene.event(event.GetPosition(), "wheeldown_ctrl")
+            else:
+                if rotation > 1:
+                    self.widget_scene.event(event.GetPosition(), "wheelup")
+                elif rotation < -1:
+                    self.widget_scene.event(event.GetPosition(), "wheeldown")
+        else:
+            if rotation > 1:
+                self.widget_scene.event(event.GetPosition(), "wheelleft")
+            elif rotation < -1:
+                self.widget_scene.event(event.GetPosition(), "wheelright")
+
+    def on_mousewheel_zoom(self, event):
+        if self.scene.HasCapture():
+            return
+        rotation = event.GetWheelRotation()
+        if self.context.mouse_zoom_invert:
+            rotation = -rotation
+        if rotation > 1:
+            self.widget_scene.event(event.GetPosition(), "wheelup")
+        elif rotation < -1:
+            self.widget_scene.event(event.GetPosition(), "wheeldown")
+
+    def on_mouse_middle_down(self, event):
+        self.scene.SetFocus()
+        if not self.scene.HasCapture():
+            self.scene.CaptureMouse()
+        self.widget_scene.event(event.GetPosition(), "middledown")
+
+    def on_mouse_middle_up(self, event):
+        if self.scene.HasCapture():
+            self.scene.ReleaseMouse()
+        self.widget_scene.event(event.GetPosition(), "middleup")
+
+    def on_left_mouse_down(self, event):
+        self.scene.SetFocus()
+        if not self.scene.HasCapture():
+            self.scene.CaptureMouse()
+        self.widget_scene.event(event.GetPosition(), "leftdown")
+
+    def on_left_mouse_up(self, event):
+        if self.scene.HasCapture():
+            self.scene.ReleaseMouse()
+        self.widget_scene.event(event.GetPosition(), "leftup")
+
+    def on_mouse_double_click(self, event):
+        if self.scene.HasCapture():
+            return
+        self.widget_scene.event(event.GetPosition(), "doubleclick")
+
+    def on_mouse_move(self, event):
+        if not event.Dragging():
+            self.widget_scene.event(event.GetPosition(), "hover")
+            return
+        self.widget_scene.event(event.GetPosition(), "move")
+
+    def on_right_mouse_down(self, event):
+        self.scene.SetFocus()
+        if event.AltDown():
+            self.widget_scene.event(event.GetPosition(), "rightdown+alt")
+        elif event.ControlDown():
+            self.widget_scene.event(event.GetPosition(), "rightdown+control")
+        else:
+            self.widget_scene.event(event.GetPosition(), "rightdown")
+
+    def on_right_mouse_up(self, event):
+        self.widget_scene.event(event.GetPosition(), "rightup")
+
+    def on_magnify_mouse(self, event):
+        magnify = event.GetMagnification()
+        if magnify > 0:
+            self.widget_scene.event(event.GetPosition(), "zoom-in")
+        if magnify < 0:
+            self.widget_scene.event(event.GetPosition(), "zoom-out")
+
+    def on_gesture(self, event):
+        """
+        This code requires WXPython 4.1 and the bind will fail otherwise.
+        """
+        if event.IsGestureStart():
+            self.widget_scene.event(event.GetPosition(), "gesture-start")
+        elif event.IsGestureEnd():
+            self.widget_scene.event(event.GetPosition(), "gesture-end")
+        else:
+            try:
+                zoom = event.GetZoomFactor()
+            except AttributeError:
+                zoom = 1.0
+            self.widget_scene.event(event.GetPosition(), "zoom %f" % zoom)
 
 
 # end of class Silence
@@ -2071,6 +2365,7 @@ class SilenceApp(wx.App, Module):
 
     @staticmethod
     def sub_register(kernel):
+        kernel.register("module/Scene", Scene)
         kernel.register("window/Silence", Silence)
         kernel.register("window/GeneralSettings", GeneralSettings)
         kernel.register("window/RasterSettings", RasterSettings)

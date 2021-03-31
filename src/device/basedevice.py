@@ -202,8 +202,7 @@ def plugin(kernel, lifecycle=None):
                 data.dy -= amount.value(ppi=1000.0, relative_length=max_bed_height)
             elif command.endswith("down"):
                 data.dy += amount.value(ppi=1000.0, relative_length=max_bed_height)
-            kernel._console_queue("device -p %s jog" % data._path)
-            #TODO: Try replacing with trigger: .trigger 1 0 device -p %s jog
+            context(".trigger 1 0 device -p %s jog" % data._path)
             return 'device', data
 
         @context.console_command(
