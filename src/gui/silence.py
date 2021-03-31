@@ -16,11 +16,11 @@ from .laserrender import (
     DRAW_MODE_ANIMATE,
     DRAW_MODE_FLIPXY,
     DRAW_MODE_INVERT,
-    DRAW_MODE_REFRESH,
+    DRAW_MODE_REFRESH, LaserRender,
 )
 from .widget import (
     GridWidget,
-    GuideWidget,
+    GuideWidget, RasterImageWidget, VectorEngraveWidget, VectorCutWidget, TimeEstimateWidget, GCodePathsWidget,
 )
 
 MILS_IN_MM = 39.3701
@@ -410,6 +410,8 @@ class Silence(MWindow, Job):
         self.__set_properties()
         self.__do_layout()
 
+        self.renderer = LaserRender(self.context)
+
         self.scene.Bind(wx.EVT_PAINT, self.on_paint)
         self.scene.Bind(wx.EVT_ERASE_BACKGROUND, self.on_erase)
 
@@ -430,6 +432,11 @@ class Silence(MWindow, Job):
 
         self.widget_scene.add_scenewidget(GridWidget(self.widget_scene))
         self.widget_scene.add_interfacewidget(GuideWidget(self.widget_scene))
+        self.widget_scene.add_scenewidget(RasterImageWidget(self.widget_scene, self.context.elements, self.renderer))
+        self.widget_scene.add_scenewidget(VectorEngraveWidget(self.widget_scene, self.context.elements, self.renderer))
+        self.widget_scene.add_scenewidget(VectorCutWidget(self.widget_scene, self.context.elements, self.renderer))
+        self.widget_scene.add_scenewidget(GCodePathsWidget(self.widget_scene, self.context.elements, self.renderer))
+        self.widget_scene.add_interfacewidget(TimeEstimateWidget(self.widget_scene, self.context.elements))
 
         try:
             self.scene.Bind(wx.EVT_MAGNIFY, self.on_magnify_mouse)
@@ -509,7 +516,6 @@ class Silence(MWindow, Job):
             self.Refresh()
             channel(_("Refreshed."))
             return
-
 
         @self.context.console_argument(
             "filename",

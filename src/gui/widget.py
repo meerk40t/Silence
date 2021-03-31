@@ -15,9 +15,6 @@ from .laserrender import (
     DRAW_MODE_BACKGROUND,
     DRAW_MODE_GRID,
     DRAW_MODE_GUIDES,
-    DRAW_MODE_LASERPATH,
-    DRAW_MODE_RETICLE,
-    DRAW_MODE_SELECTION,
 )
 from .zmatrix import ZMatrix
 
@@ -550,7 +547,7 @@ class Widget(list):
         return self.matrix.value_trans_y()
 
 
-class ElementsWidget(Widget):
+class RasterImageWidget(Widget):
     def __init__(self, scene, root, renderer):
         Widget.__init__(self, scene, all=True)
         self.renderer = renderer
@@ -564,12 +561,12 @@ class ElementsWidget(Widget):
         zoom_scale = 1 / self.scene.widget_root.scene_widget.matrix.value_scale_x()
         if zoom_scale < 1:
             zoom_scale = 1
-        self.renderer.render(
-            context.elements.elems_nodes(),
-            gc,
-            self.renderer.context.draw_mode,
-            zoomscale=zoom_scale,
-        )
+        # self.renderer.render(
+        #     context.elements.elems_nodes(),
+        #     gc,
+        #     self.renderer.context.draw_mode,
+        #     zoomscale=zoom_scale,
+        # )
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
         if event_type == "leftclick":
@@ -578,6 +575,119 @@ class ElementsWidget(Widget):
             self.root.select_in_tree_by_emphasis()
             return RESPONSE_CONSUME
         return RESPONSE_DROP
+
+
+class VectorEngraveWidget(Widget):
+    def __init__(self, scene, root, renderer):
+        Widget.__init__(self, scene, all=True)
+        self.renderer = renderer
+        self.root = root
+
+    def hit(self):
+        return HITCHAIN_HIT
+
+    def process_draw(self, gc):
+        context = self.scene.context
+        zoom_scale = 1 / self.scene.widget_root.scene_widget.matrix.value_scale_x()
+        if zoom_scale < 1:
+            zoom_scale = 1
+        # self.renderer.render(
+        #     context.elements.elems_nodes(),
+        #     gc,
+        #     self.renderer.context.draw_mode,
+        #     zoomscale=zoom_scale,
+        # )
+
+    def event(self, window_pos=None, space_pos=None, event_type=None):
+        if event_type == "leftclick":
+            elements = self.scene.context.elements
+            elements.set_emphasized_by_position(space_pos)
+            self.root.select_in_tree_by_emphasis()
+            return RESPONSE_CONSUME
+        return RESPONSE_DROP
+
+
+class VectorCutWidget(Widget):
+    def __init__(self, scene, root, renderer):
+        Widget.__init__(self, scene, all=True)
+        self.renderer = renderer
+        self.root = root
+
+    def hit(self):
+        return HITCHAIN_HIT
+
+    def process_draw(self, gc):
+        context = self.scene.context
+        zoom_scale = 1 / self.scene.widget_root.scene_widget.matrix.value_scale_x()
+        if zoom_scale < 1:
+            zoom_scale = 1
+        # self.renderer.render(
+        #     context.elements.elems_nodes(),
+        #     gc,
+        #     self.renderer.context.draw_mode,
+        #     zoomscale=zoom_scale,
+        # )
+
+    def event(self, window_pos=None, space_pos=None, event_type=None):
+        if event_type == "leftclick":
+            elements = self.scene.context.elements
+            elements.set_emphasized_by_position(space_pos)
+            self.root.select_in_tree_by_emphasis()
+            return RESPONSE_CONSUME
+        return RESPONSE_DROP
+
+
+class GCodePathsWidget(Widget):
+    def __init__(self, scene, root, renderer):
+        Widget.__init__(self, scene, all=True)
+        self.renderer = renderer
+        self.root = root
+
+    def hit(self):
+        return HITCHAIN_HIT
+
+    def process_draw(self, gc):
+        context = self.scene.context
+        zoom_scale = 1 / self.scene.widget_root.scene_widget.matrix.value_scale_x()
+        if zoom_scale < 1:
+            zoom_scale = 1
+        # self.renderer.render(
+        #     context.elements.elems_nodes(),
+        #     gc,
+        #     self.renderer.context.draw_mode,
+        #     zoomscale=zoom_scale,
+        # )
+
+    def event(self, window_pos=None, space_pos=None, event_type=None):
+        if event_type == "leftclick":
+            elements = self.scene.context.elements
+            elements.set_emphasized_by_position(space_pos)
+            self.root.select_in_tree_by_emphasis()
+            return RESPONSE_CONSUME
+        return RESPONSE_DROP
+
+
+class TimeEstimateWidget(Widget):
+    def __init__(self, scene, root):
+        Widget.__init__(self, scene, all=True)
+        self.root = root
+
+    def hit(self):
+        return HITCHAIN_HIT
+
+    def process_draw(self, gc):
+        w, h = gc.Size
+        font = wx.Font(10, wx.SWISS, wx.NORMAL, wx.BOLD)
+        gc.SetFont(font, wx.BLACK)
+        gc.DrawText("Raster Engrave: %s" % self.root.raster.estimate_time(), w-175, h-100)
+        gc.SetFont(font, wx.BLUE)
+        gc.DrawText("Vector Engrave: %s" % self.root.engrave.estimate_time(), w-175, h-75)
+        gc.SetFont(font, wx.RED)
+        gc.DrawText("Vector Cut: %s" % self.root.cut.estimate_time(), w-175, h-50)
+
+    def event(self, window_pos=None, space_pos=None, event_type=None):
+        return RESPONSE_DROP
+
 
 class GridWidget(Widget):
     def __init__(self, scene):

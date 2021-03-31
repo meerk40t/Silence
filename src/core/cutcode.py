@@ -1,4 +1,5 @@
 from copy import copy
+from math import isinf, isnan
 
 from svgelements import Color, Path, Point
 
@@ -169,6 +170,34 @@ class CutCode(list):
         for cutobject in self:
             yield COMMAND_PLOT, cutobject
         yield COMMAND_PLOT_START
+
+    def estimate_time(self):
+        estimate = 0
+        last_end = None
+        for e in self:
+            if last_end is not None:
+                length = Point.distance(last_end, e.start())
+                try:
+                    estimate += length / (39.3701 * e.settings.speed)
+                except ZeroDivisionError:
+                    estimate = float("inf")
+
+            length = Point.distance(e.start(), e.end())
+            try:
+                estimate += length / (39.3701 * e.settings.speed)
+            except ZeroDivisionError:
+                estimate = float("inf")
+
+            last_end = e.end()
+        if isnan(estimate) or isinf(estimate):
+            return "Error"
+        hours, remainder = divmod(estimate, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return "%s:%s:%s" % (
+            int(hours),
+            str(int(minutes)).zfill(2),
+            str(int(seconds)).zfill(2),
+        )
 
 
 class CutObject:

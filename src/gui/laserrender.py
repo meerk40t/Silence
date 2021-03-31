@@ -14,9 +14,10 @@ Laser Render provides GUI relevant methods of displaying the given project.
 DRAW_MODE_FILLS = 0x000001
 DRAW_MODE_GUIDES = 0x000002
 DRAW_MODE_GRID = 0x000004
-DRAW_MODE_LASERPATH = 0x000008
-DRAW_MODE_RETICLE = 0x000010
-DRAW_MODE_SELECTION = 0x000020
+DRAW_MODE_CUT = 0x000008
+DRAW_MODE_ENGRAVE = 0x000010
+DRAW_MODE_RASTER = 0x000020
+
 DRAW_MODE_STROKES = 0x000040
 DRAW_MODE_CACHE = 0x000080  # Set means do not cache.
 DRAW_MODE_REFRESH = 0x000100
@@ -48,7 +49,7 @@ class LaserRender:
         self.brush = wx.Brush()
         self.color = wx.Colour()
 
-    def render(self, nodes, gc, draw_mode=None, zoomscale=1.0):
+    def render(self, cutcode, gc, draw_mode=None, zoomscale=1.0):
         """
         Render scene information.
 
