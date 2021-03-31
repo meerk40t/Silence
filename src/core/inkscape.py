@@ -75,7 +75,7 @@ def plugin(kernel, lifecycle):
                     inkscape_path,
                     "--export-background", "white",
                     "--export-background-opacity", "255",
-                    "--export-area-page",
+                    "--export-area-drawing",
                     "--export-type=png",
                     "--export-filename=temp.png",
                     "--export-dpi=%d" % dpi,
