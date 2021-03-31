@@ -22,6 +22,7 @@ from .laserrender import (
 from .widget import (
     GridWidget,
     GuideWidget, RasterImageWidget, VectorEngraveWidget, VectorCutWidget, TimeEstimateWidget, GCodePathsWidget,
+    ReticleWidget,
 )
 
 MILS_IN_MM = 39.3701
@@ -41,7 +42,7 @@ class Silence(MWindow, Job):
     def __init__(self, *args, **kwds):
         super().__init__(815, 624, *args, **kwds)
         Job.__init__(self, job_name="refresh_scene", process=self.refresh_scene, interval=0.05)
-        self.context.setting(int, "draw_mode", 0)
+        self.context.setting(int, "draw_mode", 0xFF)
         self.context.setting(float, "units_convert", MILS_IN_MM)
         self.context.setting(str, "units_name", "mm")
         self.context.setting(int, "units_marks", 10)
@@ -434,6 +435,7 @@ class Silence(MWindow, Job):
         self.scene.Bind(wx.EVT_LEFT_DOWN, self.on_left_mouse_down)
         self.scene.Bind(wx.EVT_LEFT_UP, self.on_left_mouse_up)
 
+        self.widget_scene.add_scenewidget(ReticleWidget(self.widget_scene))
         self.widget_scene.add_scenewidget(VectorEngraveWidget(self.widget_scene, self.context.elements, self.renderer))
         self.widget_scene.add_scenewidget(VectorCutWidget(self.widget_scene, self.context.elements, self.renderer))
         self.widget_scene.add_scenewidget(GCodePathsWidget(self.widget_scene, self.context.elements, self.renderer))

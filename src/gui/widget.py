@@ -613,6 +613,32 @@ class GCodePathsWidget(Widget):
         return RESPONSE_DROP
 
 
+class ReticleWidget(Widget):
+    def __init__(self, scene):
+        Widget.__init__(self, scene)
+        context = self.scene.context
+        context.setting(float, 'current_x', 0.0)
+        context.setting(float, 'current_y', 0.0)
+        self.brush = wx.Brush(wx.Colour(swizzlecolor(0x888888)))
+        self.brush.SetStyle(wx.BRUSHSTYLE_CROSSDIAG_HATCH)
+
+    def process_draw(self, gc):
+        context = self.scene.context
+        # Draw Reticle
+        gc.PushState()
+        gc.SetPen(wx.BLACK_PEN)
+
+        gc.SetBrush(self.brush)
+        x = float(context.current_x)
+        y = float(context.current_y)
+        if x is None or y is None:
+            x = 0
+            y = 0
+        # x, y = self.scene.convert_scene_to_window([x, y])
+        size = 250
+        gc.DrawEllipse(x-size/2, y-size/2, size, size)
+        gc.PopState()
+
 class TimeEstimateWidget(Widget):
     def __init__(self, scene, root):
         Widget.__init__(self, scene, all=True)

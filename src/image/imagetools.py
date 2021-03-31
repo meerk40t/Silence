@@ -2,7 +2,7 @@ from copy import copy
 from math import ceil
 from os import path as ospath
 
-from svgelements import Angle, Color, Length, Matrix, SVGImage
+from svgelements import Angle, Color, Length, Matrix, Path, SVGImage
 
 from ..core.cutplanner import Planner
 
@@ -99,6 +99,29 @@ def plugin(kernel, lifecycle=None):
         else:
             raise SyntaxError
         return "image", images
+
+    @context.console_command(
+        "path",
+        help="return paths around image",
+        input_type="image",
+        output_type="elements",
+    )
+    def image(command, channel, _, data, args=tuple(), **kwargs):
+        elements = context.elements
+        paths = []
+        for element in data:
+            bounds = element.bbox()
+            p = Path()
+            p.move(
+                (bounds[0], bounds[1]),
+                (bounds[0], bounds[3]),
+                (bounds[2], bounds[3]),
+                (bounds[2], bounds[1]),
+            )
+            p.closed()
+            paths.append(p)
+        elements.add(paths, type="elem")
+        return "elements", paths
 
     @context.console_argument("script", help="script to apply", type=str)
     @context.console_command(

@@ -40,6 +40,7 @@ class SilenceApp(wx.App, Module):
         # theme = wx.SystemSettings().GetColour(wx.SYS_COLOUR_WINDOW)[0] < 127
         Module.__init__(self, context, path)
         self.locale = None
+        context.setting(int, "draw_mode", 0xFF)
         self.Bind(wx.EVT_CLOSE, self.on_app_close)
         self.Bind(wx.EVT_QUERY_END_SESSION, self.on_app_close)  # MAC DOCK QUIT.
         self.Bind(wx.EVT_END_SESSION, self.on_app_close)
