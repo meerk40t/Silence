@@ -16,7 +16,8 @@ from .laserrender import (
     DRAW_MODE_ANIMATE,
     DRAW_MODE_FLIPXY,
     DRAW_MODE_INVERT,
-    DRAW_MODE_REFRESH, LaserRender,
+    DRAW_MODE_REFRESH, LaserRender, DRAW_MODE_GCODE, DRAW_MODE_CUT, DRAW_MODE_RASTER, DRAW_MODE_ENGRAVE,
+    DRAW_MODE_ESTIMATE, DRAW_MODE_ZOOM,
 )
 from .widget import (
     GridWidget,
@@ -174,6 +175,7 @@ class Silence(MWindow, Job):
             wx.ID_ANY,
             "Show Time Estimate",
             "Toggle the display of time estimates on and off. When one the time estimates for the various operations will be displayed in the lower right corner of the main window. The estimates should be considered rough estimates. The Vector Cut and Vector Engrave estimates are better than the Raster Engrave estimate. The raster engrave estimate assumes the whole page area is raster engraved so it is generally an upper bound on the time required to raster engrave a given design.",
+            wx.ITEM_CHECK,
         )
         self.Bind(
             wx.EVT_MENU,
@@ -184,6 +186,7 @@ class Silence(MWindow, Job):
             wx.ID_ANY,
             "Zoom to Design Size",
             "Zoom to the input design size rather than the working area of the laser. This allows for closer inspection of the input design. This is especially useful for small designs.",
+            wx.ITEM_CHECK,
         )
         self.Bind(
             wx.EVT_MENU,
@@ -567,6 +570,8 @@ class Silence(MWindow, Job):
         self.context.listen("refresh_scene", self.on_refresh_scene)
         self.context.listen("bed_size", self.on_bed_changed)
         self.context.listen("units", self.on_space_changed)
+        self.context.listen("draw_mode", self.on_draw_mode)
+        self.on_draw_mode(self.context.draw_mode)
 
         bed_dim = self.context.get_context("bed")
         bed_dim.setting(float, "bed_width", 325.0)
@@ -668,6 +673,9 @@ class Silence(MWindow, Job):
         self.text_engrave_speed.SetValue(str(self.context.engrave_settings.speed))
         self.text_cut_speed.SetValue(str(self.context.cut_settings.speed))
 
+    def window_open(self):
+        pass
+
     def window_close(self):
         self.context("quit\n")
         self.context.unlisten("rotary_enable", self.on_rotary_enable)
@@ -675,6 +683,7 @@ class Silence(MWindow, Job):
         self.context.unlisten("op_setting_update", self.on_op_setting_update)
         self.context.unlisten("bed_size", self.on_bed_changed)
         self.context.unlisten("units", self.on_space_changed)
+        self.context.unlisten("draw_mode", self.on_draw_mode)
 
     def __set_properties(self):
         # begin wxGlade: Silence.__set_properties
@@ -1007,7 +1016,7 @@ class Silence(MWindow, Job):
         self.context.console("view_setting toggle estimate\n")
 
     def on_menu_view_zoom(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.console("scene zoom\n")
+        self.context.console("view_setting toggle zoom\n")
 
     def on_menu_calc_raster(self, event):  # wxGlade: Silence.<event_handler>
         self.context.console("calculate raster\n")
@@ -1220,6 +1229,14 @@ class Silence(MWindow, Job):
         self.widget_scene.signal("grid")
         self.widget_scene.signal("guide")
         self.request_refresh()
+
+    def on_draw_mode(self, mode):
+        self.silence_menubar.view_gcode.Check(bool(mode & DRAW_MODE_GCODE))
+        self.silence_menubar.view_cut.Check(bool(mode & DRAW_MODE_CUT))
+        self.silence_menubar.view_raster.Check(bool(mode & DRAW_MODE_RASTER))
+        self.silence_menubar.view_engrave.Check(bool(mode & DRAW_MODE_ENGRAVE))
+        self.silence_menubar.view_estimate.Check(bool(mode & DRAW_MODE_ESTIMATE))
+        self.silence_menubar.view_zoom.Check(bool(mode & DRAW_MODE_ZOOM))
 
     def on_bed_changed(self, *args):
         self.widget_scene.signal("grid")

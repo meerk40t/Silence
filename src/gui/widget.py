@@ -11,11 +11,7 @@ import wx
 
 from ..kernel import Module
 from svgelements import Color, Matrix, Point
-from .laserrender import (
-    DRAW_MODE_BACKGROUND,
-    DRAW_MODE_GRID,
-    DRAW_MODE_GUIDES,
-)
+from .laserrender import *
 from .zmatrix import ZMatrix
 
 MILS_IN_MM = 39.3701
@@ -557,6 +553,8 @@ class RasterImageWidget(Widget):
         return HITCHAIN_HIT
 
     def process_draw(self, gc):
+        if self.scene.context.draw_mode & DRAW_MODE_RASTER == 0:
+            return
         context = self.scene.context
         zoom_scale = 1 / self.scene.widget_root.scene_widget.matrix.value_scale_x()
         if zoom_scale < 1:
@@ -587,6 +585,8 @@ class VectorEngraveWidget(Widget):
         return HITCHAIN_HIT
 
     def process_draw(self, gc):
+        if self.scene.context.draw_mode & DRAW_MODE_ENGRAVE == 0:
+            return
         context = self.scene.context
         zoom_scale = 1 / self.scene.widget_root.scene_widget.matrix.value_scale_x()
         if zoom_scale < 1:
@@ -617,6 +617,8 @@ class VectorCutWidget(Widget):
         return HITCHAIN_HIT
 
     def process_draw(self, gc):
+        if self.scene.context.draw_mode & DRAW_MODE_CUT == 0:
+            return
         context = self.scene.context
         zoom_scale = 1 / self.scene.widget_root.scene_widget.matrix.value_scale_x()
         if zoom_scale < 1:
@@ -647,6 +649,8 @@ class GCodePathsWidget(Widget):
         return HITCHAIN_HIT
 
     def process_draw(self, gc):
+        if self.scene.context.draw_mode & DRAW_MODE_GCODE == 0:
+            return
         context = self.scene.context
         zoom_scale = 1 / self.scene.widget_root.scene_widget.matrix.value_scale_x()
         if zoom_scale < 1:
@@ -676,6 +680,8 @@ class TimeEstimateWidget(Widget):
         return HITCHAIN_HIT
 
     def process_draw(self, gc):
+        if self.scene.context.draw_mode & DRAW_MODE_ESTIMATE == 0:
+            return
         w, h = gc.Size
         font = wx.Font(10, wx.SWISS, wx.NORMAL, wx.BOLD)
         gc.SetFont(font, wx.BLACK)

@@ -11,15 +11,16 @@ from .zmatrix import ZMatrix
 Laser Render provides GUI relevant methods of displaying the given project.
 """
 
-DRAW_MODE_FILLS = 0x000001
+
 DRAW_MODE_GUIDES = 0x000002
 DRAW_MODE_GRID = 0x000004
+DRAW_MODE_ESTIMATE = 0x000001
 DRAW_MODE_CUT = 0x000008
 DRAW_MODE_ENGRAVE = 0x000010
 DRAW_MODE_RASTER = 0x000020
+DRAW_MODE_GCODE = 0x000040
 
-DRAW_MODE_STROKES = 0x000040
-DRAW_MODE_CACHE = 0x000080  # Set means do not cache.
+DRAW_MODE_ZOOM = 0x000080
 DRAW_MODE_REFRESH = 0x000100
 DRAW_MODE_ANIMATE = 0x000200
 DRAW_MODE_PATH = 0x000400
@@ -183,10 +184,10 @@ class LaserRender:
         gc.ConcatTransform(wx.GraphicsContext.CreateMatrix(gc, ZMatrix(matrix)))
         self.set_element_pen(gc, shape, zoomscale=zoomscale, width_scale=width_scale)
         self.set_element_brush(gc, shape)
-        if draw_mode & DRAW_MODE_FILLS == 0 and shape.fill is not None:
-            gc.FillPath(node.cache)
-        if draw_mode & DRAW_MODE_STROKES == 0 and shape.stroke is not None:
-            gc.StrokePath(node.cache)
+        # if draw_mode & DRAW_MODE_FILLS == 0 and shape.fill is not None:
+        #     gc.FillPath(node.cache)
+        # if draw_mode & DRAW_MODE_STROKES == 0 and shape.stroke is not None:
+        #     gc.StrokePath(node.cache)
         gc.PopState()
 
     def draw_path_node(self, node, gc, draw_mode, zoomscale=1.0):
@@ -207,7 +208,7 @@ class LaserRender:
         self.set_element_brush(gc, path)
         if draw_mode & DRAW_MODE_FILLS == 0 and path.fill is not None:
             gc.FillPath(node.cache)
-        if draw_mode & DRAW_MODE_STROKES == 0 and path.stroke is not None:
+        if draw_mode & DRAW_MODE_GCODE == 0 and path.stroke is not None:
             gc.StrokePath(node.cache)
         gc.PopState()
 
@@ -276,7 +277,7 @@ class LaserRender:
             matrix = Matrix()
         gc.PushState()
         gc.ConcatTransform(wx.GraphicsContext.CreateMatrix(gc, ZMatrix(matrix)))
-        if draw_mode & DRAW_MODE_CACHE == 0:
+        if draw_mode & DRAW_MODE_ZOOM == 0:
             cache = None
             try:
                 cache = node.cache
@@ -358,7 +359,7 @@ class LaserRender:
             elements = [elements]
         gc.SetBrush(wx.WHITE_BRUSH)
         gc.DrawRectangle(xmin - 1, ymin - 1, xmax + 1, ymax + 1)
-        self.render(elements, gc, draw_mode=DRAW_MODE_CACHE)
+        self.render(elements, gc, draw_mode=DRAW_MODE_ZOOM)
         img = bmp.ConvertToImage()
         buf = img.GetData()
         image = Image.frombuffer(

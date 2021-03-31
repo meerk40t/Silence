@@ -3,6 +3,7 @@ import sys
 
 import wx
 
+from .laserrender import *
 from src.gui.rasterwizard import RasterWizard
 from src.gui.terminal import Terminal
 from src.kernel import Module
@@ -191,6 +192,48 @@ class SilenceApp(wx.App, Module):
                     kernel._config.DeleteGroup("window")
             else:
                 raise SyntaxError
+
+        @kernel.console_argument(
+            "subcommand", type=str, help="subcommand"
+        )
+        @kernel.console_argument(
+            "view", type=str, help="mode"
+        )
+        @kernel.console_command("view_setting", help="view_settings <toggle/set/unset> <view>")
+        def toggle_draw_mode(subcommand, view, **kwargs):
+            """
+            Toggle the draw mode.
+            """
+            if view is None:
+                raise SyntaxError
+            context = kernel.get_context('/')
+            if view == "estimate":
+                bits = DRAW_MODE_ESTIMATE
+            elif view == "gcode":
+                bits = DRAW_MODE_GCODE
+            elif view == "cut":
+                bits = DRAW_MODE_CUT
+            elif view == "engrave":
+                bits = DRAW_MODE_ENGRAVE
+            elif view == "raster":
+                bits = DRAW_MODE_RASTER
+            elif view == "flip":
+                bits = DRAW_MODE_FLIPXY
+            elif view == "invert":
+                bits = DRAW_MODE_INVERT
+            else:
+                raise SyntaxError
+            if subcommand == "toggle":
+                context.draw_mode ^= bits
+            elif subcommand == "set":
+                context.draw_mode |= bits
+            elif subcommand == "unset":
+                context.draw_mode |= bits
+                context.draw_mode ^= bits
+            else:
+                raise SyntaxError
+            context.signal("draw_mode", context.draw_mode)
+            context.signal("refresh_scene")
 
     def run_later(self, command, *args):
         if wx.IsMainThread():
