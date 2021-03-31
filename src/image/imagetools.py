@@ -1,9 +1,8 @@
-import os
 from copy import copy
 from math import ceil
 from os import path as ospath
 
-from svgelements import Angle, Color, Length, Matrix, Path, SVGImage
+from svgelements import Angle, Color, Length, Matrix, SVGImage
 
 from ..core.cutplanner import Planner
 
@@ -32,16 +31,30 @@ def plugin(kernel, lifecycle=None):
     @context.console_command(
         "image",
         help="image <operation>*",
-        input_type=(None, "image-array"),
+        input_type=(None, "image-array", "inkscape"),
         output_type="image",
     )
     def image(command, channel, _, data_type=None, data=None, args=tuple(), **kwargs):
+        if data_type == "inkscape":
+            inkscape_path, filename = data
+            if filename.endswith("png"):
+                from PIL import Image
+                img = Image.open(filename)
+
+                svg_image = SVGImage()
+                svg_image.image = img
+                return "image", [svg_image]
+
         elements = context.elements
         if len(args) == 0:
             channel(_("----------"))
             channel(_("Images:"))
             i = 0
-            for element in elements.elems():
+            for element in elements.raster:
+                try:
+                    element = element.image
+                except AttributeError:
+                    continue
                 if not isinstance(element, SVGImage):
                     continue
                 name = str(element)
@@ -61,10 +74,18 @@ def plugin(kernel, lifecycle=None):
             channel(_("----------"))
             return
         if data_type is None:
-            if not elements.has_emphasis():
-                channel(_("No selected images."))
+            objs = []
+            for e in elements.raster:
+                try:
+                    image = e.image
+                    objs.append(image)
+                except AttributeError:
+                    pass
+            if len(objs):
+                return "image", objs
+            else:
                 return
-            images = [e for e in elements.elems(emphasized=True) if type(e) == SVGImage]
+
         elif data_type == "image-array":
             from PIL import Image
 
@@ -78,29 +99,6 @@ def plugin(kernel, lifecycle=None):
         else:
             raise SyntaxError
         return "image", images
-
-    @context.console_command(
-        "path",
-        help="return paths around image",
-        input_type="image",
-        output_type="elements",
-    )
-    def image(command, channel, _, data, args=tuple(), **kwargs):
-        elements = context.elements
-        paths = []
-        for element in data:
-            bounds = element.bbox()
-            p = Path()
-            p.move(
-                (bounds[0], bounds[1]),
-                (bounds[0], bounds[3]),
-                (bounds[2], bounds[3]),
-                (bounds[2], bounds[1]),
-            )
-            p.closed()
-            paths.append(p)
-        elements.add(paths, type="elem")
-        return "elements", paths
 
     @context.console_argument("script", help="script to apply", type=str)
     @context.console_command(
@@ -783,15 +781,11 @@ def plugin(kernel, lifecycle=None):
         output_type="image",
     )
     def halftone(
-        command,
-        channel,
-        _,
         data,
         oversample,
         sample=10,
         scale=1,
         angle=22,
-        args=tuple(),
         **kwargs
     ):
         """

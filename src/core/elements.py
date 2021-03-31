@@ -29,8 +29,8 @@ class ElementCore(Modifier):
             operation="Raster", color="black", speed=100.0, passes_custom=True, passes=1,
         )
         self.gcode = CutCode()
-        self.raster_settings = LaserSettings(
-            operation="Raster", color="black", speed=140.0
+        self.gcode_settings = LaserSettings(
+            operation="GCode", color="black", speed=140.0
         )
 
     def engrave_cutcode(self, objects):
@@ -181,9 +181,12 @@ class ElementCore(Modifier):
         @self.context.console_command(
             "raster",
             help="starts an op chain",
+            input_type=(None, 'image'),
             output_type="op"
         )
-        def op_init(command, **kwargs):
+        def op_init(command, data_type, data, **kwargs):
+            if data_type == 'image':
+                self.raster_cutcode(data)
             return "op", ("raster", self.raster, self.raster_settings)
 
         @self.context.console_argument(

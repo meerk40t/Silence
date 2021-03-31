@@ -51,15 +51,9 @@ class LaserRender:
         self.brush = wx.Brush()
         self.color = wx.Colour()
 
-    def render_cut(self, cutcode: CutCode, gc: wx.GraphicsContext):
-        """
-        Render scene information.
-        """
-        if not len(cutcode):
-            return
-        p = gc.CreatePath()
+    def render_cutcode(self, cutcode: CutCode, gc: wx.GraphicsContext):
         last_point = None
-        gc.SetPen(wx.RED_PEN)
+        p = gc.CreatePath()
         for cut in cutcode:
             start = cut.start()
             end = cut.end()
@@ -87,19 +81,34 @@ class LaserRender:
                 gc.PushState()
                 gc.ConcatTransform(wx.GraphicsContext.CreateMatrix(gc, ZMatrix(matrix)))
                 cache = None
+                cache_id = -1
                 try:
                     cache = cut.cache
+                    cache_id = cut.cache_id
                 except AttributeError:
                     pass
+                if cache_id != id(image.image):
+                    cache = None
                 if cache is None:
                     max_allowed = 2048
                     cut.c_width, cut.c_height = image.image.size
                     cut.cache = self.make_thumbnail(image.image, maximum=max_allowed)
+                    cut.cache_id = id(image.image)
                 gc.DrawBitmap(cut.cache, 0, 0, cut.c_width, cut.c_height)
                 gc.PopState()
             last_point = end
         gc.StrokePath(p)
         del p
+
+    def render_cut(self, cutcode: CutCode, gc: wx.GraphicsContext):
+        """
+        Render scene information.
+        """
+        if not len(cutcode):
+            return
+
+        gc.SetPen(wx.RED_PEN)
+        self.render_cutcode(cutcode, gc)
 
     def render_engrave(self, cutcode: CutCode, gc: wx.GraphicsContext):
         """
@@ -107,49 +116,8 @@ class LaserRender:
         """
         if not len(cutcode):
             return
-        p = gc.CreatePath()
-        last_point = None
         gc.SetPen(wx.BLUE_PEN)
-        for cut in cutcode:
-            start = cut.start()
-            end = cut.end()
-            if last_point != start:
-                p.MoveToPoint(start[0], start[1])
-            if isinstance(cut, LineCut):
-                p.AddLineToPoint(end[0], end[1])
-            elif isinstance(cut, QuadCut):
-                p.AddQuadCurveToPoint(cut.control[0], cut.control[1], end[0], end[1])
-            elif isinstance(cut, CubicCut):
-                p.AddCurveToPoint(
-                    cut.control1[0],
-                    cut.control1[1],
-                    cut.control2[0],
-                    cut.control2[1],
-                    end[0],
-                    end[1],
-                )
-            elif isinstance(cut, RasterCut):
-                image = cut.image
-                try:
-                    matrix = image.transform
-                except AttributeError:
-                    matrix = Matrix()
-                gc.PushState()
-                gc.ConcatTransform(wx.GraphicsContext.CreateMatrix(gc, ZMatrix(matrix)))
-                cache = None
-                try:
-                    cache = cut.cache
-                except AttributeError:
-                    pass
-                if cache is None:
-                    max_allowed = 2048
-                    cut.c_width, cut.c_height = image.image.size
-                    cut.cache = self.make_thumbnail(image.image, maximum=max_allowed)
-                gc.DrawBitmap(cut.cache, 0, 0, cut.c_width, cut.c_height)
-                gc.PopState()
-            last_point = end
-        gc.StrokePath(p)
-        del p
+        self.render_cutcode(cutcode, gc)
 
     def render_raster(self, cutcode: CutCode, gc: wx.GraphicsContext):
         """
@@ -157,49 +125,8 @@ class LaserRender:
         """
         if not len(cutcode):
             return
-        p = gc.CreatePath()
-        last_point = None
         gc.SetPen(wx.BLACK_PEN)
-        for cut in cutcode:
-            start = cut.start()
-            end = cut.end()
-            if last_point != start:
-                p.MoveToPoint(start[0], start[1])
-            if isinstance(cut, LineCut):
-                p.AddLineToPoint(end[0], end[1])
-            elif isinstance(cut, QuadCut):
-                p.AddQuadCurveToPoint(cut.control[0], cut.control[1], end[0], end[1])
-            elif isinstance(cut, CubicCut):
-                p.AddCurveToPoint(
-                    cut.control1[0],
-                    cut.control1[1],
-                    cut.control2[0],
-                    cut.control2[1],
-                    end[0],
-                    end[1],
-                )
-            elif isinstance(cut, RasterCut):
-                image = cut.image
-                try:
-                    matrix = image.transform
-                except AttributeError:
-                    matrix = Matrix()
-                gc.PushState()
-                gc.ConcatTransform(wx.GraphicsContext.CreateMatrix(gc, ZMatrix(matrix)))
-                cache = None
-                try:
-                    cache = cut.cache
-                except AttributeError:
-                    pass
-                if cache is None:
-                    max_allowed = 2048
-                    cut.c_width, cut.c_height = image.image.size
-                    cut.cache = self.make_thumbnail(image.image, maximum=max_allowed)
-                gc.DrawBitmap(cut.cache, 0, 0, cut.c_width, cut.c_height)
-                gc.PopState()
-            last_point = end
-        gc.StrokePath(p)
-        del p
+        self.render_cutcode(cutcode, gc)
 
     def render_gcode(self, cutcode: CutCode, gc: wx.GraphicsContext):
         """
@@ -207,87 +134,8 @@ class LaserRender:
         """
         if not len(cutcode):
             return
-        p = gc.CreatePath()
-        last_point = None
-        self.pen.SetColour(wx.GREEN_PEN)
-        gc.SetPen(self.pen)
-        for cut in cutcode:
-            start = cut.start()
-            end = cut.end()
-            if last_point != start:
-                p.MoveToPoint(start[0], start[1])
-            if isinstance(cut, LineCut):
-                p.AddLineToPoint(end[0], end[1])
-            elif isinstance(cut, QuadCut):
-                p.AddQuadCurveToPoint(cut.control[0], cut.control[1], end[0], end[1])
-            elif isinstance(cut, CubicCut):
-                p.AddCurveToPoint(
-                    cut.control1[0],
-                    cut.control1[1],
-                    cut.control2[0],
-                    cut.control2[1],
-                    end[0],
-                    end[1],
-                )
-            elif isinstance(cut, RasterCut):
-                image = cut.image
-                try:
-                    matrix = image.transform
-                except AttributeError:
-                    matrix = Matrix()
-                gc.PushState()
-                gc.ConcatTransform(wx.GraphicsContext.CreateMatrix(gc, ZMatrix(matrix)))
-                cache = None
-                try:
-                    cache = cut.cache
-                except AttributeError:
-                    pass
-                if cache is None:
-                    max_allowed = 2048
-                    cut.c_width, cut.c_height = image.image.size
-                    cut.cache = self.make_thumbnail(image.image, maximum=max_allowed)
-                gc.DrawBitmap(cut.cache, 0, 0, cut.c_width, cut.c_height)
-                gc.PopState()
-            last_point = end
-        gc.StrokePath(p)
-        del p
-
-    def set_pen(self, gc, stroke, width=1.0):
-        c = stroke
-        if c is not None and c != "none":
-            swizzle_color = swizzlecolor(c)
-            self.color.SetRGBA(swizzle_color | c.alpha << 24)  # wx has BBGGRR
-            self.pen.SetColour(self.color)
-            self.pen.SetWidth(width)
-            gc.SetPen(self.pen)
-        else:
-            gc.SetPen(wx.TRANSPARENT_PEN)
-
-    def set_brush(self, gc, fill):
-        c = fill
-        if c is not None and c != "none":
-            swizzle_color = swizzlecolor(c)
-            self.color.SetRGBA(swizzle_color | c.alpha << 24)  # wx has BBGGRR
-            self.brush.SetColour(self.color)
-            gc.SetBrush(self.brush)
-        else:
-            gc.SetBrush(wx.TRANSPARENT_BRUSH)
-
-    def set_element_pen(self, gc, element, zoomscale=1.0, width_scale=None):
-        try:
-            sw = element.stroke_width
-        except AttributeError:
-            sw = 1.0
-        if sw is None:
-            sw = 1.0
-        limit = zoomscale ** 0.5
-        limit /= width_scale
-        if sw < limit:
-            sw = limit
-        self.set_pen(gc, element.stroke, width=sw)
-
-    def set_element_brush(self, gc, element):
-        self.set_brush(gc, element.fill)
+        gc.SetPen(wx.GREEN_PEN)
+        self.render_cutcode(cutcode, gc)
 
     def make_thumbnail(self, pil_data, maximum=None, width=None, height=None):
         """Resizes the given pil image into wx.Bitmap object that fits the constraints."""
