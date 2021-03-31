@@ -13,23 +13,17 @@ Laser Render provides GUI relevant methods of displaying the given project.
 """
 
 
+DRAW_MODE_ESTIMATE = 0x000001
 DRAW_MODE_GUIDES = 0x000002
 DRAW_MODE_GRID = 0x000004
-DRAW_MODE_ESTIMATE = 0x000001
 DRAW_MODE_CUT = 0x000008
 DRAW_MODE_ENGRAVE = 0x000010
 DRAW_MODE_RASTER = 0x000020
 DRAW_MODE_GCODE = 0x000040
-
-DRAW_MODE_ZOOM = 0x000080
-DRAW_MODE_REFRESH = 0x000100
+DRAW_MODE_BACKGROUND = 0x000080
+DRAW_MODE_ZOOM = 0x000100
 DRAW_MODE_ANIMATE = 0x000200
-DRAW_MODE_PATH = 0x000400
-DRAW_MODE_IMAGE = 0x000800
-DRAW_MODE_TEXT = 0x001000
-DRAW_MODE_BACKGROUND = 0x002000
-DRAW_MODE_ICONS = 0x0040000
-DRAW_MODE_TREE = 0x0080000
+DRAW_MODE_REFRESH = 0x000400
 DRAW_MODE_INVERT = 0x400000
 DRAW_MODE_FLIPXY = 0x800000
 
@@ -51,26 +45,26 @@ class LaserRender:
         self.brush = wx.Brush()
         self.color = wx.Colour()
 
-    def render_cutcode(self, cutcode: CutCode, gc: wx.GraphicsContext):
+    def render_cutcode(self, cutcode: CutCode, gc: wx.GraphicsContext, x:int=0, y:int=0):
         last_point = None
         p = gc.CreatePath()
         for cut in cutcode:
             start = cut.start()
             end = cut.end()
             if last_point != start:
-                p.MoveToPoint(start[0], start[1])
+                p.MoveToPoint(start[0] + x, start[1] + y)
             if isinstance(cut, LineCut):
-                p.AddLineToPoint(end[0], end[1])
+                p.AddLineToPoint(end[0] + x, end[1] + y)
             elif isinstance(cut, QuadCut):
-                p.AddQuadCurveToPoint(cut.control[0], cut.control[1], end[0], end[1])
+                p.AddQuadCurveToPoint(cut.control[0] + x, cut.control[1] + y, end[0] + x, end[1] + y)
             elif isinstance(cut, CubicCut):
                 p.AddCurveToPoint(
-                    cut.control1[0],
-                    cut.control1[1],
-                    cut.control2[0],
-                    cut.control2[1],
-                    end[0],
-                    end[1],
+                    cut.control1[0] + x,
+                    cut.control1[1] + y,
+                    cut.control2[0] + x,
+                    cut.control2[1] + y,
+                    end[0] + x,
+                    end[1] + y,
                 )
             elif isinstance(cut, RasterCut):
                 image = cut.image
@@ -94,13 +88,13 @@ class LaserRender:
                     cut.c_width, cut.c_height = image.image.size
                     cut.cache = self.make_thumbnail(image.image, maximum=max_allowed)
                     cut.cache_id = id(image.image)
-                gc.DrawBitmap(cut.cache, 0, 0, cut.c_width, cut.c_height)
+                gc.DrawBitmap(cut.cache, x, y, cut.c_width, cut.c_height)
                 gc.PopState()
             last_point = end
         gc.StrokePath(p)
         del p
 
-    def render_cut(self, cutcode: CutCode, gc: wx.GraphicsContext):
+    def render_cut(self, cutcode: CutCode, gc: wx.GraphicsContext, x:int=0, y:int=0):
         """
         Render scene information.
         """
@@ -108,34 +102,34 @@ class LaserRender:
             return
 
         gc.SetPen(wx.RED_PEN)
-        self.render_cutcode(cutcode, gc)
+        self.render_cutcode(cutcode, gc, x, y)
 
-    def render_engrave(self, cutcode: CutCode, gc: wx.GraphicsContext):
+    def render_engrave(self, cutcode: CutCode, gc: wx.GraphicsContext, x:int=0, y:int=0):
         """
         Render scene information.
         """
         if not len(cutcode):
             return
         gc.SetPen(wx.BLUE_PEN)
-        self.render_cutcode(cutcode, gc)
+        self.render_cutcode(cutcode, gc, x, y)
 
-    def render_raster(self, cutcode: CutCode, gc: wx.GraphicsContext):
+    def render_raster(self, cutcode: CutCode, gc: wx.GraphicsContext, x:int=0, y:int=0):
         """
         Render scene information.
         """
         if not len(cutcode):
             return
         gc.SetPen(wx.BLACK_PEN)
-        self.render_cutcode(cutcode, gc)
+        self.render_cutcode(cutcode, gc, x, y)
 
-    def render_gcode(self, cutcode: CutCode, gc: wx.GraphicsContext):
+    def render_gcode(self, cutcode: CutCode, gc: wx.GraphicsContext, x:int=0, y:int=0):
         """
         Render scene information.
         """
         if not len(cutcode):
             return
         gc.SetPen(wx.GREEN_PEN)
-        self.render_cutcode(cutcode, gc)
+        self.render_cutcode(cutcode, gc, x, y)
 
     def make_thumbnail(self, pil_data, maximum=None, width=None, height=None):
         """Resizes the given pil image into wx.Bitmap object that fits the constraints."""

@@ -544,6 +544,9 @@ class Widget(list):
 class RasterImageWidget(Widget):
     def __init__(self, scene, root, renderer):
         Widget.__init__(self, scene)
+        context = self.scene.context
+        context.setting(int, 'current_x', 0.0)
+        context.setting(int, 'current_y', 0.0)
         self.renderer = renderer
         self.root = root
 
@@ -553,7 +556,8 @@ class RasterImageWidget(Widget):
     def process_draw(self, gc):
         if self.scene.context.draw_mode & DRAW_MODE_RASTER == 0:
             return
-        self.renderer.render_raster(self.root.raster, gc)
+        context = self.scene.context
+        self.renderer.render_raster(self.root.raster, gc, x=context.current_x, y=context.current_y)
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
         return RESPONSE_DROP
@@ -571,7 +575,8 @@ class VectorEngraveWidget(Widget):
     def process_draw(self, gc):
         if self.scene.context.draw_mode & DRAW_MODE_ENGRAVE == 0:
             return
-        self.renderer.render_engrave(self.root.engrave, gc)
+        context = self.scene.context
+        self.renderer.render_engrave(self.root.engrave, gc, x=context.current_x, y=context.current_y)
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
         return RESPONSE_DROP
@@ -589,7 +594,8 @@ class VectorCutWidget(Widget):
     def process_draw(self, gc):
         if self.scene.context.draw_mode & DRAW_MODE_CUT == 0:
             return
-        self.renderer.render_cut(self.root.cut, gc)
+        context = self.scene.context
+        self.renderer.render_cut(self.root.cut, gc, x=context.current_x, y=context.current_y)
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
         return RESPONSE_DROP
@@ -607,7 +613,8 @@ class GCodePathsWidget(Widget):
     def process_draw(self, gc:wx.GraphicsContext):
         if self.scene.context.draw_mode & DRAW_MODE_GCODE == 0:
             return
-        self.renderer.render_gcode(self.root.gcode, gc)
+        context = self.scene.context
+        self.renderer.render_gcode(self.root.gcode, gc, x=context.current_x, y=context.current_y)
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
         return RESPONSE_DROP
@@ -617,8 +624,8 @@ class ReticleWidget(Widget):
     def __init__(self, scene):
         Widget.__init__(self, scene)
         context = self.scene.context
-        context.setting(float, 'current_x', 0.0)
-        context.setting(float, 'current_y', 0.0)
+        context.setting(int, 'current_x', 0.0)
+        context.setting(int, 'current_y', 0.0)
         self.brush = wx.Brush(wx.Colour(swizzlecolor(0x888888)))
         self.brush.SetStyle(wx.BRUSHSTYLE_CROSSDIAG_HATCH)
 
@@ -629,8 +636,8 @@ class ReticleWidget(Widget):
         gc.SetPen(wx.BLACK_PEN)
 
         gc.SetBrush(self.brush)
-        x = float(context.current_x)
-        y = float(context.current_y)
+        x = int(context.current_x)
+        y = int(context.current_y)
         if x is None or y is None:
             x = 0
             y = 0
@@ -710,7 +717,7 @@ class GridWidget(Widget):
         self.grid = starts, ends
 
     def process_draw(self, gc):
-        if self.scene.context.draw_mode & DRAW_MODE_BACKGROUND == 0:
+        if self.scene.context.draw_mode & DRAW_MODE_BACKGROUND != 0:
             context = self.scene.context
             if context is not None:
                 bed_dim = context.get_context("bed")
@@ -731,7 +738,7 @@ class GridWidget(Widget):
             else:
                 gc.DrawBitmap(background, 0, 0, wmils, hmils)
 
-        if self.scene.context.draw_mode & DRAW_MODE_GRID == 0:
+        if self.scene.context.draw_mode & DRAW_MODE_GRID != 0:
             if self.grid is None:
                 self.calculate_grid()
             starts, ends = self.grid
@@ -755,7 +762,7 @@ class GuideWidget(Widget):
         self.scene.context.setting(bool, "show_negative_guide", True)
 
     def process_draw(self, gc):
-        if self.scene.context.draw_mode & DRAW_MODE_GUIDES != 0:
+        if self.scene.context.draw_mode & DRAW_MODE_GUIDES == 0:
             return
         gc.SetPen(wx.BLACK_PEN)
         w, h = gc.Size

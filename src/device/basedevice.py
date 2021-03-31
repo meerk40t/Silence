@@ -261,6 +261,7 @@ def plugin(kernel, lifecycle=None):
                 data._dy -= idy
             else:
                 channel(_("Busy Error"))
+            context.signal("refresh_scene", 0)
             return 'device', data
 
         @context.console_argument("x", type=Length, help="change in x")

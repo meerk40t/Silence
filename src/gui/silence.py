@@ -13,11 +13,10 @@ from src.gui.icons import (icon_CC, icon_down, icon_left, icon_LL, icon_LR,
 from src.gui.mwindow import MWindow
 from src.kernel import Job
 from .laserrender import (
-    DRAW_MODE_ANIMATE,
     DRAW_MODE_FLIPXY,
     DRAW_MODE_INVERT,
-    DRAW_MODE_REFRESH, LaserRender, DRAW_MODE_GCODE, DRAW_MODE_CUT, DRAW_MODE_RASTER, DRAW_MODE_ENGRAVE,
-    DRAW_MODE_ESTIMATE, DRAW_MODE_ZOOM,
+    LaserRender, DRAW_MODE_GCODE, DRAW_MODE_CUT, DRAW_MODE_RASTER, DRAW_MODE_ENGRAVE,
+    DRAW_MODE_ESTIMATE, DRAW_MODE_ZOOM, DRAW_MODE_REFRESH, DRAW_MODE_ANIMATE,
 )
 from .widget import (
     GridWidget,
