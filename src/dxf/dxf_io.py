@@ -29,9 +29,9 @@ class DxfLoader:
 
         Dxf data has an origin point located in the lower left corner. +y -> top
         """
-        bed_dim = kernel.get_context("/")
-        bed_dim.setting(int, "bed_width", 310)
-        bed_dim.setting(int, "bed_height", 210)
+        bed_dim = kernel.get_context("bed")
+        bed_dim.setting(float, "bed_width", 325.0)
+        bed_dim.setting(float, "bed_height", 220.0)
 
         dxf = ezdxf.readfile(pathname)
         elements = []

@@ -423,9 +423,9 @@ class MoshiInterpreter(Interpreter, Modifier):
     def calc_home_position(self):
         x = self.context.home_adjust_x
         y = self.context.home_adjust_y
-        bed_dim = self.context.get_context("/")
-        bed_dim.setting(int, "bed_width", 310)
-        bed_dim.setting(int, "bed_height", 210)
+        bed_dim = self.context.get_context("bed")
+        bed_dim.setting(float, "bed_width", 325.0)
+        bed_dim.setting(float, "bed_height", 220.0)
         if self.context.home_right:
             x += int(bed_dim.bed_width * 39.3701)
         if self.context.home_bottom:

@@ -26,9 +26,9 @@ def plugin(kernel, lifecycle=None):
     if lifecycle == "register":
         kernel.register("modifier/Spooler", Spooler)
         context = kernel.get_context('/')
-        bed_dim = kernel.get_context('/')
-        bed_dim.setting(int, "bed_width", 310)
-        bed_dim.setting(int, "bed_height", 210)
+        bed_dim = kernel.get_context('bed')
+        bed_dim.setting(float, "bed_width", 325.0)
+        bed_dim.setting(float, "bed_height", 220.0)
 
         def execute_absolute_position(position_x, position_y):
             x_pos = Length(position_x).value(

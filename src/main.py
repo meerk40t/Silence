@@ -98,9 +98,9 @@ def run():
     kernel.add_plugin(dxf_io.plugin)
 
     if not args.no_gui:
-        from .gui import silence
+        from .gui import silence_app
 
-        kernel.add_plugin(silence.plugin)
+        kernel.add_plugin(silence_app.plugin)
 
     if not getattr(sys, "frozen", False):
         """

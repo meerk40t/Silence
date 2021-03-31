@@ -17,9 +17,9 @@ class SVGLoader:
 
     @staticmethod
     def load(context, elements_modifier, pathname, **kwargs):
-        bed_dim = context.get_context("/")
-        bed_dim.setting(int, "bed_width", 310)
-        bed_dim.setting(int, "bed_height", 210)
+        bed_dim = context.get_context("bed")
+        bed_dim.setting(float, "bed_width", 325.0)
+        bed_dim.setting(float, "bed_height", 220.0)
         if "svg_ppi" in kwargs:
             ppi = float(kwargs["svg_ppi"])
         else:

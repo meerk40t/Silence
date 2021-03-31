@@ -25,7 +25,9 @@ def plugin(kernel, lifecycle=None):
     kernel.register("raster_script/Simple", RasterScripts.raster_script_simple())
     kernel.register("load/ImageLoader", ImageLoader)
     context = kernel.get_context("/")
-    bed_dim = context.get_context("/")
+    bed_dim = context.get_context("bed")
+    bed_dim.setting(float, "bed_width", 325.0)
+    bed_dim.setting(float, "bed_height", 220.0)
 
     @context.console_command(
         "image",
