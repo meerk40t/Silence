@@ -952,7 +952,7 @@ class Silence(MWindow):
         self.context.console("window open TraceBoundary\n")
 
     def on_menu_initialize(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.console("usb connect\n")
+        self.context.console("device -p / init Lhystudios activate start\n")
 
     def on_menu_reset_usb(self, event):  # wxGlade: Silence.<event_handler>
         self.context.console("usb reset\n")
@@ -982,7 +982,7 @@ class Silence(MWindow):
         self.context.console("webhelp manual\n")
 
     def on_button_initialize_laser(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.console("usb connect\n")
+        self.context.console("device -p / init Lhystudios activate start\n")
 
     def on_button_open_design(self, event):  # wxGlade: Silence.<event_handler>
         self.context.console("design_load\n")
