@@ -748,7 +748,7 @@ class Kernel:
         import functools
         import types
 
-        filename = "MeerK40t-debug-{date:%Y-%m-%d_%H_%M_%S}.txt".format(
+        filename = "Silence-debug-{date:%Y-%m-%d_%H_%M_%S}.txt".format(
             date=datetime.datetime.now()
         )
         debug_file = open(filename, "a")
@@ -2116,7 +2116,7 @@ class Kernel:
                 from datetime import datetime
 
                 if self.console_channel_file is None:
-                    filename = "MeerK40t-channel-{date:%Y-%m-%d_%H_%M_%S}.txt".format(
+                    filename = "Silence-channel-{date:%Y-%m-%d_%H_%M_%S}.txt".format(
                         date=datetime.now()
                     )
                     channel(_("Opening file: %s") % filename)
@@ -2142,7 +2142,7 @@ class Kernel:
                 channel(_("No relevant context found."))
 
         @self.console_command(
-            ("quit", "shutdown"), help="quits meerk40t shutting down all processes"
+            ("quit", "shutdown"), help="quits program shutting down all processes"
         )
         def shutdown(command, channel, _, args=tuple(), **kwargs):
             if self.state not in (STATE_END, STATE_TERMINATE):

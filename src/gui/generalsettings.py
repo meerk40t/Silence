@@ -110,8 +110,6 @@ class GeneralSettings(MWindow):
         self.bed_dim = self.context.get_context('bed')
         self.bed_dim.setting(float, "bed_width", 325.0)
         self.bed_dim.setting(float, "bed_height", 220.0)
-        self.context.setting(float, "bed_width", 325.0)
-        self.context.setting(float, "bed_height", 220.0)
         self.context.setting(float, "x_factor", 1.0)
         self.context.setting(float, "y_factor", 1.0)
         if self.context.units == 0:

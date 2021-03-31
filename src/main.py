@@ -31,7 +31,7 @@ def pair(value):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-V", "--version", action="store_true", help="MeerK40t version")
+parser.add_argument("-V", "--version", action="store_true", help="Silence version")
 parser.add_argument("input", nargs="?", type=argparse.FileType("r"), help="input file")
 parser.add_argument("-z", "--no_gui", action="store_true", help="run without gui")
 parser.add_argument(

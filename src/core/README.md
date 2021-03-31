@@ -2,7 +2,7 @@
 
 # Core
 
-Core modules are largely tools and classes that define Meerk40t specific ecosystem requirements within the kernel.
+Core modules are largely tools and classes that define specific ecosystem requirements within the kernel.
 
 * Elements is shape, path, image, and path-text interactions.
 * Laser Operations are broad laser operations like `Engrave`, `Cut`, `Raster`, and `Image`. These operations combined with Elements become `Cutcode` which is used by the devices to control the operations.

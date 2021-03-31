@@ -28,9 +28,9 @@ def plugin(kernel, lifecycle):
         kernel_root.open("module/SilenceApp")
     elif lifecycle == "mainloop":
         kernel_root = kernel.get_context("/")
-        meerk40tgui = kernel_root.open("module/SilenceApp")
+        gui = kernel_root.open("module/SilenceApp")
         kernel_root("window open -p / Silence\n")
-        meerk40tgui.MainLoop()
+        gui.MainLoop()
 
 
 class SilenceApp(wx.App, Module):
@@ -128,7 +128,7 @@ class SilenceApp(wx.App, Module):
                 channel, _, subcommand=None, window=None, path=None, args=(), **kwargs
         ):
             """
-            Opens a MeerK40t window or provides information. This command is restricted to use with the wxMeerK40t gui.
+            Opens a window or provides information. This command is restricted to use with the gui.
             This also allows use of a -p flag that sets the context path for this window to operate at. This should
             often be restricted to where the windows are typically opened since their function and settings usually
             depend on the context used. The default root path is "/". Eg. "window open -p / Settings"

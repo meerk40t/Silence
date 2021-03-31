@@ -11,4 +11,4 @@ These are the stock M2 Nano boards by Lhystudios and other closely related board
 
 # Moshi
 
-Moshiboard classes are intended to deal with USB interactions to and from the CH341 chips on Moshiboards over USB. This is the result of `Project Moshi` (https://github.com/meerk40t/moshi) which seeks to reverse engineer the Moshiboard interactions and control them with MeerK40t. This provides functional Moshiboard drivers.
+Moshiboard classes are intended to deal with USB interactions to and from the CH341 chips on Moshiboards over USB. This is the result of `Project Moshi` (https://github.com/meerk40t/moshi) which seeks to reverse engineer the Moshiboard interactions. This provides functional Moshiboard drivers.

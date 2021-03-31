@@ -1,6 +1,4 @@
 from ...kernel import STATE_UNKNOWN, Modifier
-from svgelements import Length
-from ..lasercommandconstants import *
 from .moshicontroller import MoshiController
 from .moshiinterpreter import MoshiInterpreter
 
@@ -44,25 +42,18 @@ class MoshiDevice(Modifier):
 
     def attach(self, *a, **kwargs):
         context = self.context
-        root_context = context.get_context("/")
-        kernel = context._kernel
-
         context.setting(str, "device_name", "Moshi")
-
         context._quit = False
-
         context.setting(int, "usb_index", -1)
         context.setting(int, "usb_bus", -1)
         context.setting(int, "usb_address", -1)
         context.setting(int, "usb_serial", -1)
         context.setting(int, "usb_version", -1)
-
         context.setting(bool, "mock", False)
         context.setting(int, "packet_count", 0)
         context.setting(int, "rejected_count", 0)
         context.setting(bool, "autolock", True)
         context.setting(str, "board", "M2")
-
         context.setting(bool, "fix_speeds", False)
 
         self.dx = 0
