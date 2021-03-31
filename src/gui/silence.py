@@ -46,6 +46,7 @@ class Silence(MWindow, Job):
         self.context.setting(str, "units_name", "mm")
         self.context.setting(int, "units_marks", 10)
         self.context.setting(int, "units_index", 0)
+        self.context.setting(str, "board", "M2")
         self._Buffer = None
 
         self.widget_scene = self.root_context.open("module/Scene")
@@ -1055,7 +1056,10 @@ class Silence(MWindow, Job):
         self.context.console("webhelp manual\n")
 
     def on_button_initialize_laser(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.console("device -p / init Lhystudios activate start\n")
+        if self.context.board == "Moshiboard":
+            self.context.console("device -p / init Moshi activate start\n")
+        else:
+            self.context.console("device -p / init Lhystudios activate start\n")
 
     def on_button_open_design(self, event):  # wxGlade: Silence.<event_handler>
         self.context.console("design_load\n")

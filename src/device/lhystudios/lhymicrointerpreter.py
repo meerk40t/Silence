@@ -763,8 +763,11 @@ class LhymicroInterpreter(Interpreter, Modifier):
         dy = int(round(dy))
         self.pipe(b"@NSE")
         self.state = INTERPRETER_STATE_RAPID
+        board = self.context.board
+        if board.startswith("LASER-"):
+            board = board[6:]
         speed_code = LaserSpeed(
-            self.context.board,
+            board,
             self.settings.speed,
             self.settings.raster_step,
             d_ratio=self.settings.implicit_d_ratio,
@@ -807,9 +810,11 @@ class LhymicroInterpreter(Interpreter, Modifier):
         if self.state == INTERPRETER_STATE_PROGRAM:
             return
         self.ensure_finished_mode()
-
+        board = self.context.board
+        if board.startswith("LASER-"):
+            board = board[6:]
         speed_code = LaserSpeed(
-            self.context.board,
+            board,
             self.settings.speed,
             self.settings.raster_step,
             d_ratio=self.settings.implicit_d_ratio,
