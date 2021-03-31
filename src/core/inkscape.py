@@ -10,6 +10,7 @@ def plugin(kernel, lifecycle):
             "load",
             help="simplify path",
             input_type="inkscape",
+            output_type="inkscape",
         )
         def load(channel, _, data=None, **kwargs):
             inkscape_path, filename = data
@@ -17,6 +18,7 @@ def plugin(kernel, lifecycle):
             e = kernel.get_context('/')
             e.load(filename)
             e.signal("refresh_scene", 0)
+            return "inkscape", data
 
         @kernel.console_command(
             "simplify",
