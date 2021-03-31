@@ -487,8 +487,10 @@ class Context:
             if not isinstance(obj_value, (int, float, str, bool, Color)):
                 continue
             load_value = self._kernel.read_persistent(
-                type(obj_value), self.abs_path(attr)
+                type(obj_value), self.abs_path(attr), default=obj_value
             )
+            if load_value is None:
+                pass
             try:
                 setattr(obj, attr, load_value)
                 setattr(self, attr, load_value)
