@@ -58,6 +58,7 @@ def plugin(kernel, lifecycle=None):
                 yield COMMAND_MODE_RAPID
                 yield COMMAND_MOVE, int(x_pos), int(y_pos)
                 yield COMMAND_SET_ABSOLUTE
+                context.signal("refresh_scene", 1)
 
             return move
 
@@ -261,7 +262,6 @@ def plugin(kernel, lifecycle=None):
                 data._dy -= idy
             else:
                 channel(_("Busy Error"))
-            context.signal("refresh_scene", 0)
             return 'device', data
 
         @context.console_argument("x", type=Length, help="change in x")
