@@ -149,6 +149,52 @@ def plugin(kernel, lifecycle=None):
             channel(_("Device %s, initialized at %s" % (device, data._path)))
             return "device", data
 
+        @context.console_command(
+            "spooler",
+            help="spooler: list the spooled items for the current device",
+            input_type=("device", None),
+            output_type="device",
+        )
+        def spool(channel, _, data, **kwargs):
+            if data is None:
+                data = context.active
+            channel(_("----------"))
+            channel(_("Devices:"))
+            for i, ctx_name in enumerate(kernel.contexts):
+                ctx = kernel.contexts[ctx_name]
+                if hasattr(ctx, "spooler"):
+                    channel("Device: %s, %s" % (ctx._path, str(ctx)))
+                    for e in ctx.spooler._queue:
+                        channel("     %s" % e)
+            channel("----------")
+            return "device", data
+
+        @context.console_command(
+            "buffer",
+            help="spooler: list the spooled items for the current device",
+            input_type=("device", None),
+            output_type="device",
+        )
+        def buffer(channel, _, data, **kwargs):
+            if data is None:
+                data = context.active
+            try:
+                pipe = data.open("pipe")
+            except ValueError:
+                channel(_("Device not initialized."))
+                return
+            buffer = None
+            if pipe is not None:
+                try:
+                    buffer = pipe.viewbuffer()
+                except AttributeError:
+                    buffer = None
+            if buffer is None:
+                channel(_("Could not find buffer.\n"))
+                return
+            channel(buffer)
+            return "device", data
+
         @context.console_command("+laser", hidden=True, input_type=("device", None), output_type='device', help="turn laser on in place")
         def plus_laser(data, **kwargs):
             if data is None:

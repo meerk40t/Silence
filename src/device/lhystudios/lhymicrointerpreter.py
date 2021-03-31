@@ -138,14 +138,6 @@ class LhymicroInterpreter(Interpreter, Modifier):
         self.pipe = self.context.channel("pipe/send")
         self.realtime_pipe = self.context.channel("pipe/send_realtime")
 
-        def primary_hold():
-            buffer = self.context._buffer_size
-            if buffer is None:
-                return False
-            return self.context.buffer_limit and buffer > self.context.buffer_max
-
-        self.holds.append(primary_hold)
-
     def attach(self, *a, **kwargs):
         context = self.context
         kernel = context._kernel
@@ -294,8 +286,6 @@ class LhymicroInterpreter(Interpreter, Modifier):
         context.setting(bool, "home_bottom", False)
         context.setting(int, "home_adjust_x", 0)
         context.setting(int, "home_adjust_y", 0)
-        context.setting(int, "buffer_max", 900)
-        context.setting(bool, "buffer_limit", True)
         context.setting(int, "current_x", 0)
         context.setting(int, "current_y", 0)
         root_context.setting(bool, "opt_rapid_between", True)
