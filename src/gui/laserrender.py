@@ -6,6 +6,7 @@ from svgelements import (Arc, Close, Color, CubicBezier, Group, Line, Matrix,
                          Move, Path, QuadraticBezier, Shape, SVGImage, SVGText)
 
 from .zmatrix import ZMatrix
+from ..core.cutcode import LineCut, QuadCut, CubicCut, CutCode
 
 """
 Laser Render provides GUI relevant methods of displaying the given project.
@@ -50,7 +51,7 @@ class LaserRender:
         self.brush = wx.Brush()
         self.color = wx.Colour()
 
-    def render(self, cutcode, gc, draw_mode=None, zoomscale=1.0):
+    def render(self, cutcode: CutCode, gc: wx.GraphicsContext, draw_mode=None, zoomscale=1.0):
         """
         Render scene information.
 
@@ -58,75 +59,33 @@ class LaserRender:
         :param draw_mode:
         :return:
         """
-        if draw_mode is None:
-            draw_mode = self.context.draw_mode
-
-        if draw_mode & (DRAW_MODE_TEXT | DRAW_MODE_IMAGE | DRAW_MODE_PATH) != 0:
-            types = []
-            if draw_mode & DRAW_MODE_PATH == 0:
-                types.append(Path)
-            if draw_mode & DRAW_MODE_IMAGE == 0:
-                types.append(SVGImage)
-            if draw_mode & DRAW_MODE_TEXT == 0:
-                types.append(SVGText)
-            nodes = [e for e in nodes if type(e.object) in types]
-
-        for node in nodes:
-            try:
-                node.draw(node, gc, draw_mode, zoomscale=zoomscale)
-            except AttributeError:
-                element = node.object
-                if isinstance(element, Path):
-                    node.draw = self.draw_path_node
-                elif isinstance(element, Shape):
-                    node.draw = self.draw_shape_node
-                elif isinstance(element, SVGImage):
-                    node.draw = self.draw_image_node
-                elif isinstance(element, SVGText):
-                    node.draw = self.draw_text_node
-                elif isinstance(element, Group):
-                    node.draw = self.draw_group_node
-                else:
-                    continue
-                node.draw(node, gc, draw_mode, zoomscale=zoomscale)
-
-    def make_path(self, gc, path):
-        """
-        Takes an svgelements.Path and converts it to a GraphicsContext.Graphics Path
-        """
+        if not len(cutcode):
+            return
         p = gc.CreatePath()
-        first_point = path.first_point
-        if first_point is not None:
-            p.MoveToPoint(first_point[0], first_point[1])
-        for e in path:
-            if isinstance(e, Move):
-                p.MoveToPoint(e.end[0], e.end[1])
-            elif isinstance(e, Line):
-                p.AddLineToPoint(e.end[0], e.end[1])
-            elif isinstance(e, Close):
-                p.CloseSubpath()
-            elif isinstance(e, QuadraticBezier):
-                p.AddQuadCurveToPoint(e.control[0], e.control[1], e.end[0], e.end[1])
-            elif isinstance(e, CubicBezier):
+        last_point = None
+        gc.SetPen(wx.BLACK_PEN)
+        gc.SetBrush(wx.BLUE_BRUSH)
+        for cut in cutcode:
+            start = cut.start()
+            end = cut.end()
+            if last_point != start:
+                p.MoveToPoint(start[0], start[1])
+            if isinstance(cut, LineCut):
+                p.AddLineToPoint(end[0], end[1])
+            elif isinstance(cut, QuadCut):
+                p.AddQuadCurveToPoint(cut.control[0], cut.control[1], end[0], end[1])
+            elif isinstance(cut, CubicCut):
                 p.AddCurveToPoint(
-                    e.control1[0],
-                    e.control1[1],
-                    e.control2[0],
-                    e.control2[1],
-                    e.end[0],
-                    e.end[1],
+                    cut.control1[0],
+                    cut.control1[1],
+                    cut.control2[0],
+                    cut.control2[1],
+                    end[0],
+                    end[1],
                 )
-            elif isinstance(e, Arc):
-                for curve in e.as_cubic_curves():
-                    p.AddCurveToPoint(
-                        curve.control1[0],
-                        curve.control1[1],
-                        curve.control2[0],
-                        curve.control2[1],
-                        curve.end[0],
-                        curve.end[1],
-                    )
-        return p
+            last_point = end
+        gc.StrokePath(p)
+        del p
 
     def set_pen(self, gc, stroke, width=1.0):
         c = stroke

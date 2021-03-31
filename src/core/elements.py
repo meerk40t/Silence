@@ -2,7 +2,7 @@
 from svgelements import Color, SVGImage, Path, Polygon, Move, Close, Line, QuadraticBezier, CubicBezier, Arc
 
 from ..kernel import Modifier
-from .cutcode import CutCode, LaserSettings, LineCut, QuadCut, CubicCut, ArcCut, RasterCut
+from .cutcode import CutCode, LaserSettings, LineCut, QuadCut, CubicCut, RasterCut
 
 
 def plugin(kernel, lifecycle=None):
@@ -18,13 +18,17 @@ class ElementCore(Modifier):
         Modifier.__init__(self, context, name, channel)
         self.engrave = CutCode()
         self.engrave_settings = LaserSettings(
-            operation="Engrave", color="blue", speed=35.0
+            operation="Engrave", color="blue", speed=20.0, passes_custom=True, passes=1,
         )
         self.cut = CutCode()
         self.cut_settings = LaserSettings(
-            operation="Cut", color="red", speed=10.0
+            operation="Cut", color="red", speed=10.0, passes_custom=True, passes=1,
         )
         self.raster = CutCode()
+        self.raster_settings = LaserSettings(
+            operation="Raster", color="black", speed=100.0, passes_custom=True, passes=1,
+        )
+        self.gcode = CutCode()
         self.raster_settings = LaserSettings(
             operation="Raster", color="black", speed=140.0
         )
@@ -128,8 +132,16 @@ class ElementCore(Modifier):
                         )
                     )
                 elif isinstance(seg, Arc):
-                    arc = ArcCut(seg, settings=settings)
-                    c.append(arc)
+                    for s in seg.as_cubic_curves():
+                        c.append(
+                            CubicCut(
+                                s.start,
+                                s.control1,
+                                s.control2,
+                                s.end,
+                                settings=settings,
+                            )
+                        )
         if settings.passes_custom:
             c *= settings.passes
         if len(c) == 0:

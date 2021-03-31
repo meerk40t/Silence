@@ -545,7 +545,7 @@ class Widget(list):
 
 class RasterImageWidget(Widget):
     def __init__(self, scene, root, renderer):
-        Widget.__init__(self, scene, all=True)
+        Widget.__init__(self, scene)
         self.renderer = renderer
         self.root = root
 
@@ -555,29 +555,15 @@ class RasterImageWidget(Widget):
     def process_draw(self, gc):
         if self.scene.context.draw_mode & DRAW_MODE_RASTER == 0:
             return
-        context = self.scene.context
-        zoom_scale = 1 / self.scene.widget_root.scene_widget.matrix.value_scale_x()
-        if zoom_scale < 1:
-            zoom_scale = 1
-        # self.renderer.render(
-        #     context.elements.elems_nodes(),
-        #     gc,
-        #     self.renderer.context.draw_mode,
-        #     zoomscale=zoom_scale,
-        # )
+        self.renderer.render(self.root.raster, gc, self.scene.context.draw_mode)
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
-        if event_type == "leftclick":
-            elements = self.scene.context.elements
-            elements.set_emphasized_by_position(space_pos)
-            self.root.select_in_tree_by_emphasis()
-            return RESPONSE_CONSUME
         return RESPONSE_DROP
 
 
 class VectorEngraveWidget(Widget):
     def __init__(self, scene, root, renderer):
-        Widget.__init__(self, scene, all=True)
+        Widget.__init__(self, scene)
         self.renderer = renderer
         self.root = root
 
@@ -587,29 +573,15 @@ class VectorEngraveWidget(Widget):
     def process_draw(self, gc):
         if self.scene.context.draw_mode & DRAW_MODE_ENGRAVE == 0:
             return
-        context = self.scene.context
-        zoom_scale = 1 / self.scene.widget_root.scene_widget.matrix.value_scale_x()
-        if zoom_scale < 1:
-            zoom_scale = 1
-        # self.renderer.render(
-        #     context.elements.elems_nodes(),
-        #     gc,
-        #     self.renderer.context.draw_mode,
-        #     zoomscale=zoom_scale,
-        # )
+        self.renderer.render(self.root.engrave, gc, self.scene.context.draw_mode)
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
-        if event_type == "leftclick":
-            elements = self.scene.context.elements
-            elements.set_emphasized_by_position(space_pos)
-            self.root.select_in_tree_by_emphasis()
-            return RESPONSE_CONSUME
         return RESPONSE_DROP
 
 
 class VectorCutWidget(Widget):
     def __init__(self, scene, root, renderer):
-        Widget.__init__(self, scene, all=True)
+        Widget.__init__(self, scene)
         self.renderer = renderer
         self.root = root
 
@@ -619,16 +591,7 @@ class VectorCutWidget(Widget):
     def process_draw(self, gc):
         if self.scene.context.draw_mode & DRAW_MODE_CUT == 0:
             return
-        context = self.scene.context
-        zoom_scale = 1 / self.scene.widget_root.scene_widget.matrix.value_scale_x()
-        if zoom_scale < 1:
-            zoom_scale = 1
-        # self.renderer.render(
-        #     context.elements.elems_nodes(),
-        #     gc,
-        #     self.renderer.context.draw_mode,
-        #     zoomscale=zoom_scale,
-        # )
+        self.renderer.render(self.root.cut, gc, self.scene.context.draw_mode)
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
         if event_type == "leftclick":
@@ -651,16 +614,7 @@ class GCodePathsWidget(Widget):
     def process_draw(self, gc):
         if self.scene.context.draw_mode & DRAW_MODE_GCODE == 0:
             return
-        context = self.scene.context
-        zoom_scale = 1 / self.scene.widget_root.scene_widget.matrix.value_scale_x()
-        if zoom_scale < 1:
-            zoom_scale = 1
-        # self.renderer.render(
-        #     context.elements.elems_nodes(),
-        #     gc,
-        #     self.renderer.context.draw_mode,
-        #     zoomscale=zoom_scale,
-        # )
+        self.renderer.render(self.root.gcode, gc, self.scene.context.draw_mode)
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
         if event_type == "leftclick":

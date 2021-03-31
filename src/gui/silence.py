@@ -433,12 +433,12 @@ class Silence(MWindow, Job):
         self.scene.Bind(wx.EVT_LEFT_DOWN, self.on_left_mouse_down)
         self.scene.Bind(wx.EVT_LEFT_UP, self.on_left_mouse_up)
 
-        self.widget_scene.add_scenewidget(GridWidget(self.widget_scene))
-        self.widget_scene.add_interfacewidget(GuideWidget(self.widget_scene))
         self.widget_scene.add_scenewidget(RasterImageWidget(self.widget_scene, self.context.elements, self.renderer))
         self.widget_scene.add_scenewidget(VectorEngraveWidget(self.widget_scene, self.context.elements, self.renderer))
         self.widget_scene.add_scenewidget(VectorCutWidget(self.widget_scene, self.context.elements, self.renderer))
         self.widget_scene.add_scenewidget(GCodePathsWidget(self.widget_scene, self.context.elements, self.renderer))
+        self.widget_scene.add_scenewidget(GridWidget(self.widget_scene))
+        self.widget_scene.add_interfacewidget(GuideWidget(self.widget_scene))
         self.widget_scene.add_interfacewidget(TimeEstimateWidget(self.widget_scene, self.context.elements))
 
         try:

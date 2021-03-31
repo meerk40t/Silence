@@ -217,6 +217,12 @@ class SilenceApp(wx.App, Module):
                 bits = DRAW_MODE_ENGRAVE
             elif view == "raster":
                 bits = DRAW_MODE_RASTER
+            elif view == "grid":
+                bits = DRAW_MODE_GRID
+            elif view == "guide":
+                bits = DRAW_MODE_GUIDES
+            elif view == "background":
+                bits = DRAW_MODE_BACKGROUND
             elif view == "flip":
                 bits = DRAW_MODE_FLIPXY
             elif view == "invert":

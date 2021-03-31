@@ -140,8 +140,6 @@ class CutCode(list):
                 path.quad(e.control, end)
             elif isinstance(e, CubicCut):
                 path.quad(e.control1, e.control2, end)
-            elif isinstance(e, ArcCut):
-                path.append(e.arc)
             if previous_settings is not settings and previous_settings is not None:
                 if path is not None and len(path) != 0:
                     elements.append(path)
@@ -295,25 +293,6 @@ class CubicCut(CutObject):
             self._end[0],
             self._end[1],
         )
-
-
-class ArcCut(CutObject):
-    def __init__(self, arc, settings=None):
-        CutObject.__init__(self, settings=settings)
-        settings.raster_step = 0
-        self.arc = arc
-
-    def start(self):
-        return self.arc.start
-
-    def end(self):
-        return self.arc.end
-
-    def reverse(self):
-        self.arc = copy(self.arc).reversed()
-
-    def generator(self):
-        return ZinglPlotter.plot_arc(self.arc)
 
 
 class RasterCut(CutObject):
