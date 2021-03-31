@@ -555,7 +555,7 @@ class RasterImageWidget(Widget):
     def process_draw(self, gc):
         if self.scene.context.draw_mode & DRAW_MODE_RASTER == 0:
             return
-        self.renderer.render(self.root.raster, gc, self.scene.context.draw_mode)
+        self.renderer.render_raster(self.root.raster, gc)
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
         return RESPONSE_DROP
@@ -573,7 +573,7 @@ class VectorEngraveWidget(Widget):
     def process_draw(self, gc):
         if self.scene.context.draw_mode & DRAW_MODE_ENGRAVE == 0:
             return
-        self.renderer.render(self.root.engrave, gc, self.scene.context.draw_mode)
+        self.renderer.render_engrave(self.root.engrave, gc)
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
         return RESPONSE_DROP
@@ -591,37 +591,27 @@ class VectorCutWidget(Widget):
     def process_draw(self, gc):
         if self.scene.context.draw_mode & DRAW_MODE_CUT == 0:
             return
-        self.renderer.render(self.root.cut, gc, self.scene.context.draw_mode)
+        self.renderer.render_cut(self.root.cut, gc)
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
-        if event_type == "leftclick":
-            elements = self.scene.context.elements
-            elements.set_emphasized_by_position(space_pos)
-            self.root.select_in_tree_by_emphasis()
-            return RESPONSE_CONSUME
         return RESPONSE_DROP
 
 
 class GCodePathsWidget(Widget):
     def __init__(self, scene, root, renderer):
-        Widget.__init__(self, scene, all=True)
+        Widget.__init__(self, scene)
         self.renderer = renderer
         self.root = root
 
     def hit(self):
         return HITCHAIN_HIT
 
-    def process_draw(self, gc):
+    def process_draw(self, gc:wx.GraphicsContext):
         if self.scene.context.draw_mode & DRAW_MODE_GCODE == 0:
             return
-        self.renderer.render(self.root.gcode, gc, self.scene.context.draw_mode)
+        self.renderer.render_gcode(self.root.gcode, gc)
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
-        if event_type == "leftclick":
-            elements = self.scene.context.elements
-            elements.set_emphasized_by_position(space_pos)
-            self.root.select_in_tree_by_emphasis()
-            return RESPONSE_CONSUME
         return RESPONSE_DROP
 
 

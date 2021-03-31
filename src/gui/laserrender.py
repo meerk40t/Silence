@@ -51,20 +51,15 @@ class LaserRender:
         self.brush = wx.Brush()
         self.color = wx.Colour()
 
-    def render(self, cutcode: CutCode, gc: wx.GraphicsContext, draw_mode=None, zoomscale=1.0):
+    def render_cut(self, cutcode: CutCode, gc: wx.GraphicsContext):
         """
         Render scene information.
-
-        :param gc:
-        :param draw_mode:
-        :return:
         """
         if not len(cutcode):
             return
         p = gc.CreatePath()
         last_point = None
-        gc.SetPen(wx.BLACK_PEN)
-        gc.SetBrush(wx.BLUE_BRUSH)
+        gc.SetPen(wx.RED_PEN)
         for cut in cutcode:
             start = cut.start()
             end = cut.end()
@@ -86,6 +81,101 @@ class LaserRender:
             last_point = end
         gc.StrokePath(p)
         del p
+
+    def render_engrave(self, cutcode: CutCode, gc: wx.GraphicsContext):
+        """
+        Render scene information.
+        """
+        if not len(cutcode):
+            return
+        p = gc.CreatePath()
+        last_point = None
+        gc.SetPen(wx.BLUE_PEN)
+        for cut in cutcode:
+            start = cut.start()
+            end = cut.end()
+            if last_point != start:
+                p.MoveToPoint(start[0], start[1])
+            if isinstance(cut, LineCut):
+                p.AddLineToPoint(end[0], end[1])
+            elif isinstance(cut, QuadCut):
+                p.AddQuadCurveToPoint(cut.control[0], cut.control[1], end[0], end[1])
+            elif isinstance(cut, CubicCut):
+                p.AddCurveToPoint(
+                    cut.control1[0],
+                    cut.control1[1],
+                    cut.control2[0],
+                    cut.control2[1],
+                    end[0],
+                    end[1],
+                )
+            last_point = end
+        gc.StrokePath(p)
+        del p
+
+    def render_raster(self, cutcode: CutCode, gc: wx.GraphicsContext):
+        """
+        Render scene information.
+        """
+        if not len(cutcode):
+            return
+        p = gc.CreatePath()
+        last_point = None
+        gc.SetPen(wx.BLACK_PEN)
+        for cut in cutcode:
+            start = cut.start()
+            end = cut.end()
+            if last_point != start:
+                p.MoveToPoint(start[0], start[1])
+            if isinstance(cut, LineCut):
+                p.AddLineToPoint(end[0], end[1])
+            elif isinstance(cut, QuadCut):
+                p.AddQuadCurveToPoint(cut.control[0], cut.control[1], end[0], end[1])
+            elif isinstance(cut, CubicCut):
+                p.AddCurveToPoint(
+                    cut.control1[0],
+                    cut.control1[1],
+                    cut.control2[0],
+                    cut.control2[1],
+                    end[0],
+                    end[1],
+                )
+            last_point = end
+        gc.StrokePath(p)
+        del p
+
+    def render_gcode(self, cutcode: CutCode, gc: wx.GraphicsContext):
+        """
+        Render scene information.
+        """
+        if not len(cutcode):
+            return
+        p = gc.CreatePath()
+        last_point = None
+        self.pen.SetColour(wx.GREEN_PEN)
+        gc.SetPen(self.pen)
+        for cut in cutcode:
+            start = cut.start()
+            end = cut.end()
+            if last_point != start:
+                p.MoveToPoint(start[0], start[1])
+            if isinstance(cut, LineCut):
+                p.AddLineToPoint(end[0], end[1])
+            elif isinstance(cut, QuadCut):
+                p.AddQuadCurveToPoint(cut.control[0], cut.control[1], end[0], end[1])
+            elif isinstance(cut, CubicCut):
+                p.AddCurveToPoint(
+                    cut.control1[0],
+                    cut.control1[1],
+                    cut.control2[0],
+                    cut.control2[1],
+                    end[0],
+                    end[1],
+                )
+            last_point = end
+        gc.StrokePath(p)
+        del p
+
 
     def set_pen(self, gc, stroke, width=1.0):
         c = stroke
@@ -318,7 +408,7 @@ class LaserRender:
             elements = [elements]
         gc.SetBrush(wx.WHITE_BRUSH)
         gc.DrawRectangle(xmin - 1, ymin - 1, xmax + 1, ymax + 1)
-        self.render(elements, gc, draw_mode=DRAW_MODE_ZOOM)
+        self.render(elements, gc)
         img = bmp.ConvertToImage()
         buf = img.GetData()
         image = Image.frombuffer(
