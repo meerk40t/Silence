@@ -125,9 +125,10 @@ def plugin(kernel, lifecycle=None):
             input_type="device",
             output_type="device",
         )
-        def activate(channel, _, data, **kwargs):
-            data.start()
-            channel(_("Device at context '%s' activated" % data._path))
+        def start(channel, _, data, **kwargs):
+            data.interpreter.start_interpreter()
+            # data.controller.start()
+            channel(_("Device at context '%s' started" % data._path))
             return "device", data
 
         @context.console_argument("device", help="Device to initialize...")
@@ -147,20 +148,6 @@ def plugin(kernel, lifecycle=None):
                 return
             channel(_("Device %s, initialized at %s" % (device, data._path)))
             return "device", data
-
-        @context.console_argument("type", type=str, help="type of pipe to use")
-        @context.console_command(
-            "pipe",
-            help="pipe to utilize on this device",
-            input_type="device",
-            output_type="device",
-        )
-        def pipe(data=None, **kwargs):
-            # TODO: MAKE THIS WORK.
-            if data is None:
-                data = context.active
-            data.pipe = None
-            return 'device', data
 
         @context.console_command("+laser", hidden=True, input_type=("device", None), output_type='device', help="turn laser on in place")
         def plus_laser(data, **kwargs):

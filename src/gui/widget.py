@@ -7,10 +7,8 @@ except ImportError:
 
     tau = 2 * pi
 
-import wx
-
 from ..kernel import Module
-from svgelements import Color, Matrix, Point
+from svgelements import  Point
 from .laserrender import *
 from .zmatrix import ZMatrix
 

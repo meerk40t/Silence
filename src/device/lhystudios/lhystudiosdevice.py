@@ -49,8 +49,6 @@ class LhystudiosDevice(Modifier):
 
     def attach(self, *a, **kwargs):
         context = self.context
-        root_context = context.get_context("/")
-        kernel = context._kernel
         context.setting(str, "device_name", "Lhystudios")
 
         context._quit = False
