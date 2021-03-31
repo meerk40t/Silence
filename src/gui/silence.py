@@ -627,6 +627,7 @@ class Silence(MWindow, Job):
                 channel=self.context.channel("load"),
                 svg_ppi=self.context.svg_ppi,
             )
+            self.request_refresh()
             if results:
                 try:
                     if self.context.uniform_svg and pathname.lower().endswith("svg"):
@@ -1084,25 +1085,25 @@ class Silence(MWindow, Job):
         self.context.console("align top left\n")
 
     def on_button_jog_top(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.console("move top %fmm\n" % self.context.jog_step)
+        self.context.console("top %fmm\n" % self.context.jog_step)
 
     def on_button_align_top_right(self, event):  # wxGlade: Silence.<event_handler>
         self.context.console("align top right\n")
 
     def on_button_jog_left(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.console("move left %fmm\n" % self.context.jog_step)
+        self.context.console("left %fmm\n" % self.context.jog_step)
 
     def on_button_align_center(self, event):  # wxGlade: Silence.<event_handler>
         self.context.console("align center center\n")
 
     def on_button_jog_right(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.console("move right %fmm\n" % self.context.jog_step)
+        self.context.console("right %fmm\n" % self.context.jog_step)
 
     def on_button_align_bottom_left(self, event):  # wxGlade: Silence.<event_handler>
         self.context.console("align bottom left\n")
 
     def on_button_jog_bottom(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.console("move bottom %fmm\n" % self.context.jog_step)
+        self.context.console("bottom %fmm\n" % self.context.jog_step)
 
     def on_button_align_bottom_right(self, event):  # wxGlade: Silence.<event_handler>
         self.context.console("align bottom right\n")

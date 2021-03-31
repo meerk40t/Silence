@@ -33,7 +33,7 @@ class LhystudioEmulator(Module):
         self.context.setting(bool, "fix_speeds", False)
         self.process = self.state_default
 
-        send = context.channel("pipe/usb_send")
+        send = context.channel("usb_send")
         send.watch(self.write_packet)
 
         self.channel = self.context.channel("lhy")

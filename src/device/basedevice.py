@@ -214,7 +214,7 @@ def plugin(kernel, lifecycle=None):
         @context.console_argument(
             "amount", type=Length, help="amount to move in the set direction."
         )
-        @context.console_command(("left", "right", "up", "down"), input_type=("device", None), output_type='device', help="cmd <amount>")
+        @context.console_command(("left", "right", "top", "bottom"), input_type=("device", None), output_type='device', help="cmd <amount>")
         def direction(command, channel, _, data=None, amount=None, **kwargs):
             if data is None:
                 data = context.active
@@ -227,15 +227,18 @@ def plugin(kernel, lifecycle=None):
                 amount = Length("1mm")
             max_bed_height = bed_dim.bed_height * 39.3701
             max_bed_width = bed_dim.bed_width * 39.3701
+            if not hasattr(data, '_dx'):
+                data._dx = 0
+                data._dy = 0
             if command.endswith("right"):
-                data.dx += amount.value(ppi=1000.0, relative_length=max_bed_width)
+                data._dx += amount.value(ppi=1000.0, relative_length=max_bed_width)
             elif command.endswith("left"):
-                data.dx -= amount.value(ppi=1000.0, relative_length=max_bed_width)
-            elif command.endswith("up"):
-                data.dy -= amount.value(ppi=1000.0, relative_length=max_bed_height)
-            elif command.endswith("down"):
-                data.dy += amount.value(ppi=1000.0, relative_length=max_bed_height)
-            context(".trigger 1 0 device -p %s jog" % data._path)
+                data._dx -= amount.value(ppi=1000.0, relative_length=max_bed_width)
+            elif command.endswith("top"):
+                data._dy -= amount.value(ppi=1000.0, relative_length=max_bed_height)
+            elif command.endswith("bottom"):
+                data._dy += amount.value(ppi=1000.0, relative_length=max_bed_height)
+            context(".trigger 1 0 device -p %s jog\n" % data._path)
             return 'device', data
 
         @context.console_command(
@@ -245,14 +248,17 @@ def plugin(kernel, lifecycle=None):
             if data is None:
                 data = context.active
             spooler = data.spooler
-            idx = int(data.dx)
-            idy = int(data.dy)
+            if not hasattr(data, '_dx'):
+                data._dx = 0
+                data._dy = 0
+            idx = int(data._dx)
+            idy = int(data._dy)
             if idx == 0 and idy == 0:
                 return
             if spooler.job_if_idle(execute_relative_position(idx, idy)):
                 channel(_("Position moved: %d %d") % (idx, idy))
-                data.dx -= idx
-                data.dy -= idy
+                data._dx -= idx
+                data._dy -= idy
             else:
                 channel(_("Busy Error"))
             return 'device', data

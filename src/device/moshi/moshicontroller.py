@@ -57,10 +57,10 @@ class MoshiController(Module):
         self.count = 0
         self.abort_waiting = False
 
-        self.pipe_channel = context.channel("%s/events" % name)
-        self.usb_log = context.channel("%s/usb" % name, buffer_size=20)
-        self.usb_send_channel = context.channel("%s/usb_send" % name)
-        self.recv_channel = context.channel("%s/recv" % name)
+        self.pipe_channel = context.channel("events")
+        self.usb_log = context.channel("usb", buffer_size=20)
+        self.usb_send_channel = context.channel("usb_send")
+        self.recv_channel = context.channel("recv")
         self.usb_log.watch(lambda e: context.signal("pipe;usb_status", e))
 
         send = context.channel("%s/send" % name)
