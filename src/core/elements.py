@@ -1,4 +1,4 @@
-
+from ..device.lasercommandconstants import COMMAND_MOVE
 from ..svgelements import Color, SVGImage, Path, Polygon, Move, Close, Line, QuadraticBezier, CubicBezier, Arc
 
 from ..kernel import Modifier
@@ -239,6 +239,7 @@ class ElementCore(Modifier):
             for i in range(op_set.implicit_passes):
                 cutcode.set_offset(context.offset_x, context.offset_y)
                 self.context.get_context('/').spooler.job(cutcode)
+            self.context.get_context('/').spooler.job(self.context.registered["plan/origin"])
             return "op", data
 
         @self.context.console_command(

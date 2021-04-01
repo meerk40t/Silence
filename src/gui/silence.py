@@ -377,7 +377,7 @@ class Silence(MWindow, Job):
         self.text_cut_speed = wx.TextCtrl(
             self.panel_3, wx.ID_ANY, "10", style=wx.TE_CENTRE
         )
-        self.button_10 = wx.Button(self.panel_3, wx.ID_ANY, "Pause/Stop")
+        self.button_pause_stop = wx.Button(self.panel_3, wx.ID_ANY, "Pause/Stop")
         self.advanced_settings = wx.Panel(self, wx.ID_ANY)
         self.checkbox_halftone = wx.CheckBox(
             self.advanced_settings, wx.ID_ANY, "Halftone (Dither)"
@@ -486,7 +486,7 @@ class Silence(MWindow, Job):
         self.Bind(wx.EVT_TEXT, self.on_text_engrave_speed, self.text_engrave_speed)
         self.Bind(wx.EVT_BUTTON, self.on_button_vector_cut, self.button_cut)
         self.Bind(wx.EVT_TEXT, self.on_text_cut_speed, self.text_cut_speed)
-        self.Bind(wx.EVT_BUTTON, self.on_button_pause_stop, self.button_10)
+        self.Bind(wx.EVT_BUTTON, self.on_button_pause_stop, self.button_pause_stop)
         self.Bind(wx.EVT_CHECKBOX, self.on_check_halftone, self.checkbox_halftone)
         self.Bind(wx.EVT_CHECKBOX, self.on_check_invert, self.checkbox_invert)
         self.Bind(wx.EVT_CHECKBOX, self.on_check_mirror, self.checkbox_mirror)
@@ -801,9 +801,9 @@ class Silence(MWindow, Job):
         )
         self.text_cut_speed.SetMinSize((52, 23))
         self.text_cut_speed.SetForegroundColour(wx.Colour(255, 0, 0))
-        self.button_10.SetMinSize((0, 50))
-        self.button_10.SetBackgroundColour(wx.Colour(142, 35, 35))
-        self.button_10.SetToolTip(
+        self.button_pause_stop.SetMinSize((0, 50))
+        self.button_pause_stop.SetBackgroundColour(wx.Colour(142, 35, 35))
+        self.button_pause_stop.SetToolTip(
             "Stop the running laser job. Pressing this button will pause sending the current job data to the laser and pop up a dialog box asking if you want to cancel the remainder of the job. The laser head may not stop instantly because there is some data that has already been sent to the laser controller board. The laser will finish running the data it has received before it stops."
         )
         self.panel_6.SetMinSize((200, 0))
@@ -941,7 +941,7 @@ class Silence(MWindow, Job):
         label_8 = wx.StaticText(self.panel_3, wx.ID_ANY, "mm/s")
         sizer_17.Add(label_8, 1, 0, 0)
         sizer_14.Add(sizer_17, 2, wx.EXPAND, 0)
-        sizer_14.Add(self.button_10, 0, wx.EXPAND, 0)
+        sizer_14.Add(self.button_pause_stop, 0, wx.EXPAND, 0)
         self.panel_3.SetSizer(sizer_14)
         sizer_2.Add(self.panel_3, 0, wx.EXPAND, 0)
         self.panel_6.SetSizer(sizer_2)
@@ -1179,7 +1179,21 @@ class Silence(MWindow, Job):
             pass
 
     def on_button_pause_stop(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.console("stop\n")
+        self.context("pause\n")
+        dlg = wx.MessageDialog(
+            None,
+            _("Press OK to abort.\n"
+              "Cancel to resume the job."),
+            _("Stop Laser Sending?"),
+            wx.OK | wx.CANCEL | wx.ICON_WARNING,
+        )
+        result = dlg.ShowModal()
+        if result == wx.ID_OK:
+            self.context("abort\n")
+        else:
+            self.context("pause\n")
+            self.context("resume\n")
+        dlg.Destroy()
 
     def on_check_halftone(self, event):  # wxGlade: Silence.<event_handler>
         self.context.halftone = bool(self.checkbox_halftone.GetValue())
