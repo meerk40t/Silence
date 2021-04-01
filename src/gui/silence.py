@@ -1159,49 +1159,49 @@ class Silence(MWindow, Job):
         self.context.console("stop\n")
 
     def on_check_halftone(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.halftone = self.checkbox_halftone.Value
+        self.context.halftone = bool(self.checkbox_halftone.GetValue())
         self.context.signal("halftone", self.context.halftone)
 
     def on_check_invert(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.invert = self.checkbox_invert.Value
+        self.context.invert = bool(self.checkbox_invert.GetValue())
 
     def on_check_mirror(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.mirror = self.checkbox_mirror.Value
+        self.context.mirror = bool(self.checkbox_mirror.GetValue())
 
     def on_check_rotate(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.rotate = self.checkbox_rotate.Value
+        self.context.rotate = bool(self.checkbox_rotate.GetValue())
 
     def on_check_csys(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.csys = self.checkbox_csys.Value
+        self.context.csys = bool(self.checkbox_csys.GetValue())
 
     def on_check_cut_inside(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.cut_inner = self.checkbox_cut_inner.Value
+        self.context.cut_inner = bool(self.checkbox_cut_inner.GetValue())
 
     def on_check_use_rotary(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.rotary_enable = self.checkbox_rotary_enable.Value
+        self.context.rotary_enable = bool(self.checkbox_rotary_enable.GetValue())
         self.context.signal("rotary_enable", self.context.rotary_enable)
 
     def on_check_group_engrave(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.group_engrave = self.checkbox_group_engrave.Value
+        self.context.group_engrave = bool(self.checkbox_group_engrave.GetValue())
 
     def on_check_group_vector(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.group_vector = self.checkbox_group_vector.Value
+        self.context.group_vector = bool(self.checkbox_group_vector.GetValue())
 
     def on_text_raster_engrave_passes(self, event):  # wxGlade: Silence.<event_handler>
         try:
-            self.context.raster_passes = int(self.text_raster_passes.Value)
+            self.context.raster_settings.passes = int(self.text_raster_passes.GetValue())
         except ValueError:
             pass
 
     def on_text_vector_engrave_passes(self, event):  # wxGlade: Silence.<event_handler>
         try:
-            self.context.engrave_passes = int(self.text_engrave_passes.Value)
+            self.context.engrave_settings.passes = int(self.text_engrave_passes.GetValue())
         except ValueError:
             pass
 
     def on_text_vector_cut_passes(self, event):  # wxGlade: Silence.<event_handler>
         try:
-            self.context.cut_passes = int(self.text_cut_passes.Value)
+            self.context.cut_settings.passes = int(self.text_cut_passes.GetValue())
         except ValueError:
             pass
 
