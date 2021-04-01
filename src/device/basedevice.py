@@ -42,6 +42,7 @@ def plugin(kernel, lifecycle=None):
                 yield COMMAND_SET_ABSOLUTE
                 yield COMMAND_MODE_RAPID
                 yield COMMAND_MOVE, int(x_pos), int(y_pos)
+                yield COMMAND_SET_OFFSET, int(x_pos), int(y_pos)
 
             return move
 
@@ -57,9 +58,8 @@ def plugin(kernel, lifecycle=None):
                 yield COMMAND_SET_INCREMENTAL
                 yield COMMAND_MODE_RAPID
                 yield COMMAND_MOVE, int(x_pos), int(y_pos)
+                yield COMMAND_INC_OFFSET, -int(x_pos), -int(y_pos)
                 yield COMMAND_SET_ABSOLUTE
-                context.offset_x += int(x_pos)
-                context.offset_y += int(y_pos)
                 context.signal("refresh_scene", 1)
 
             return move
@@ -585,6 +585,8 @@ class Interpreter:
                 self.set_position(values[0], values[1])
             elif command == COMMAND_SET_OFFSET:
                 self.set_offset(values[0], values[1])
+            elif command == COMMAND_INC_OFFSET:
+                self.inc_offset(values[0], values[1])
             elif command == COMMAND_MODE_RAPID:
                 self.ensure_rapid_mode()
             elif command == COMMAND_MODE_PROGRAM:
@@ -821,6 +823,13 @@ class Interpreter:
         self.context.current_x += self.context.offset_x
         self.context.current_y += self.context.offset_y
 
+        self.context.current_y = y
+
+    def inc_offset(self, dx, dy):
+        """
+        Increments the offset from true position.
+        """
+        self.set_offset(self.context.offset_x + dx, self.context.offset_y + dy)
 
     def wait(self, t):
         # TODO: This doesn't work without scheduler.

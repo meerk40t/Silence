@@ -45,6 +45,7 @@ COMMAND_SET_INCREMENTAL = 210  # sets the commands to be relative to current pos
 COMMAND_SET_ABSOLUTE = 211  # sets the commands to be absolute positions.
 COMMAND_SET_POSITION = 220  # Without moving sets the current position to the given coord
 COMMAND_SET_OFFSET = 221  # Sets the data offset.
+COMMAND_INC_OFFSET = 222  # Increments the Offset
 
 COMMAND_HOME = 300  # Homes the device
 COMMAND_LOCK = 301  # Locks the rail
