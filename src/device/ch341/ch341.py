@@ -23,12 +23,6 @@ class Connection:
         """
         pass
 
-    def validate(self):
-        """
-        Opens the connection to validate that it exists.
-        """
-        pass
-
     def open(self):
         """
         Opens the connection.
