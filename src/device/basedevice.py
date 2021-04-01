@@ -42,7 +42,7 @@ def plugin(kernel, lifecycle=None):
                 yield COMMAND_SET_ABSOLUTE
                 yield COMMAND_MODE_RAPID
                 yield COMMAND_MOVE, int(x_pos), int(y_pos)
-                yield COMMAND_SET_OFFSET, int(x_pos), int(y_pos)
+                yield COMMAND_SET_OFFSET, -int(x_pos), -int(y_pos)
 
             return move
 
@@ -148,6 +148,12 @@ def plugin(kernel, lifecycle=None):
             except KeyError:
                 channel(_("Device %s is not valid type. 'device type' for a list of valid types."))
                 return
+            data.offset_x = 0
+            data.offset_y = 0
+            data.setting(bool, "init_home", True)
+            if data.init_home:
+                data.spooler.job(COMMAND_HOME)
+                context.signal("refresh_scene", 1)
             channel(_("Device %s, initialized at %s" % (device, data._path)))
             return "device", data
 

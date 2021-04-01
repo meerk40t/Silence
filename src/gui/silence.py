@@ -1136,7 +1136,7 @@ class Silence(MWindow, Job):
 
     def on_button_move(self, event):  # wxGlade: Silence.<event_handler>
         self.context.console(
-            "move_to %fmm %fmm\n" % (self.context.move_x, self.context.move_y)
+            "move_absolute %fmm %fmm\n" % (self.context.move_x, self.context.move_y)
         )
 
     def on_text_move_x(self, event):  # wxGlade: Silence.<event_handler>
