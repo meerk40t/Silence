@@ -58,7 +58,7 @@ def plugin(kernel, lifecycle=None):
                 yield COMMAND_SET_INCREMENTAL
                 yield COMMAND_MODE_RAPID
                 yield COMMAND_MOVE, int(x_pos), int(y_pos)
-                yield COMMAND_INC_OFFSET, -int(x_pos), -int(y_pos)
+                yield COMMAND_INC_OFFSET, int(x_pos), int(y_pos)
                 yield COMMAND_SET_ABSOLUTE
                 context.signal("refresh_scene", 1)
 
