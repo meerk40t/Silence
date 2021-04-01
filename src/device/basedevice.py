@@ -128,7 +128,6 @@ def plugin(kernel, lifecycle=None):
         )
         def start(channel, _, data, **kwargs):
             data.interpreter.start_interpreter()
-            # data.controller.start()
             channel(_("Device at context '%s' started" % data._path))
             return "device", data
 

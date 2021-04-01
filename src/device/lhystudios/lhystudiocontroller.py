@@ -303,17 +303,11 @@ class LhystudioController(Module):
 
         context.register("control/Resume", resume_k40)
 
-        self.context.get_context("/").listen(
-            "lifecycle;ready", self.on_controller_ready
-        )
 
     def on_controller_ready(self, *args):
         self.start()
 
     def finalize(self, *args, **kwargs):
-        self.context.get_context("/").unlisten(
-            "lifecycle;ready", self.on_controller_ready
-        )
         if self._thread is not None:
             self.write(b"\x18\n")
 
