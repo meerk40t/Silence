@@ -1,5 +1,4 @@
 Pillow
-svgelements
 pyusb
 wxPython
 ezdxf
