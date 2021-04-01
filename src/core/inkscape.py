@@ -127,7 +127,12 @@ def plugin(kernel, lifecycle):
             output_type="inkscape",
         )
         def locate(channel, _, data, **kwargs):
-            if "win" in platform:
+            if "darwin" in platform:
+                inkscape = [
+                    "/Applications/Inkscape.app/Contents/MacOS/Inkscape"
+                    "/Applications/Inkscape.app/Contents/Resources/bin/inkscape"
+                ]
+            elif "win" in platform:
                 inkscape = [
                     "C:/Program Files/Inkscape/inkscape.exe",
                     "C:/Program Files (x86)/Inkscape/inkscape.exe",
@@ -138,11 +143,6 @@ def plugin(kernel, lifecycle):
                 inkscape = [
                     "/usr/local/bin/inkscape",
                     "/usr/bin/inkscape",
-                ]
-            elif "darwin" in platform:
-                inkscape = [
-                    "/Applications/Inkscape.app/Contents/MacOS/Inkscape"
-                    "/Applications/Inkscape.app/Contents/Resources/bin/inkscape"
                 ]
             else:
                 channel(_("Platform inkscape locations unknown."))
