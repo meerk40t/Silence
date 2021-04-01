@@ -1080,7 +1080,7 @@ class Silence(MWindow, Job):
 
     def on_text_jog_step(self, event):  # wxGlade: Silence.<event_handler>
         try:
-            self.context.jog_step = float(self.text_jog_step.Value)
+            self.context.jog_step = float(self.text_jog_step.GetValue())
         except ValueError:
             pass
 
@@ -1118,13 +1118,13 @@ class Silence(MWindow, Job):
 
     def on_text_move_x(self, event):  # wxGlade: Silence.<event_handler>
         try:
-            self.context.move_x = float(self.text_move_x.Value)
+            self.context.move_x = float(self.text_move_x.GetValue())
         except ValueError:
             pass
 
     def on_text_move_y(self, event):  # wxGlade: Silence.<event_handler>
         try:
-            self.context.move_y = float(self.text_move_y.Value)
+            self.context.move_y = float(self.text_move_y.GetValue())
         except ValueError:
             pass
 
@@ -1133,7 +1133,7 @@ class Silence(MWindow, Job):
 
     def on_text_raster_speed(self, event):  # wxGlade: Silence.<event_handler>
         try:
-            self.context.raster_settings.speed = float(self.text_raster_speed.Value)
+            self.context.raster_settings.speed = float(self.text_raster_speed.GetValue())
         except ValueError:
             pass
 
@@ -1142,7 +1142,7 @@ class Silence(MWindow, Job):
 
     def on_text_engrave_speed(self, event):  # wxGlade: Silence.<event_handler>
         try:
-            self.context.engrave_settings.speed = float(self.text_engrave_speed.Value)
+            self.context.engrave_settings.speed = float(self.text_engrave_speed.GetValue())
         except ValueError:
             pass
 
@@ -1151,7 +1151,7 @@ class Silence(MWindow, Job):
 
     def on_text_cut_speed(self, event):  # wxGlade: Silence.<event_handler>
         try:
-            self.context.cut_settings.speed = float(self.text_cut_speed.Value)
+            self.context.cut_settings.speed = float(self.text_cut_speed.GetValue())
         except ValueError:
             pass
 

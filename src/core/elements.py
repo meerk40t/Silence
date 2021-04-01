@@ -227,7 +227,8 @@ class ElementCore(Modifier):
                 channel(_("Nothing to Execute"))
                 return
             name, cutcode, op_set = data
-            self.context.get_context('/').spooler.job(cutcode)
+            for i in range(op_set.implicit_passes):
+                self.context.get_context('/').spooler.job(cutcode)
             return "op", data
 
         @self.context.console_command(
