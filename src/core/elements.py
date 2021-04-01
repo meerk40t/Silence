@@ -1,4 +1,3 @@
-from ..device.lasercommandconstants import COMMAND_MOVE
 from ..svgelements import Color, SVGImage, Path, Polygon, Move, Close, Line, QuadraticBezier, CubicBezier, Arc
 
 from ..kernel import Modifier
@@ -28,6 +27,7 @@ class ElementCore(Modifier):
         self.raster_settings = LaserSettings(
             operation="Raster", color="black", speed=100.0, passes_custom=True, passes=1,
         )
+        self.raster_settings.raster_step = 2
         self.gcode = CutCode()
         self.gcode_settings = LaserSettings(
             operation="GCode", color="black", speed=140.0, passes_custom=True, passes=1,
@@ -307,6 +307,16 @@ class ElementCore(Modifier):
                 value = value.value
             op_set.write_persistent(key, value)
 
+        op_set = settings.derive('gcode')
+        for key in dir(self.gcode_settings):
+            if key.startswith("_") or key.startswith("implicit"):
+                continue
+            value = getattr(self.gcode_settings, key)
+            if value is None:
+                continue
+            if isinstance(value, Color):
+                value = value.value
+            op_set.write_persistent(key, value)
         settings.close_subpaths()
 
     def boot(self, *a, **kwargs):
@@ -317,6 +327,9 @@ class ElementCore(Modifier):
         op_set.load_persistent_object(self.cut_settings)
         op_set = settings.derive('raster')
         op_set.load_persistent_object(self.raster_settings)
+        op_set = settings.derive('gcode')
+        op_set.load_persistent_object(self.gcode_settings)
+        self.raster_settings.raster_step = 2
 
     def load(self, pathname, **kwargs):
         kernel = self.context._kernel

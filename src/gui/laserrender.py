@@ -72,9 +72,10 @@ class LaserRender:
             elif isinstance(cut, RasterCut):
                 image = cut.image
                 try:
-                    matrix = image.transform
+                    matrix = Matrix(image.transform)
                 except AttributeError:
                     matrix = Matrix()
+                matrix.post_translate(x,y)
                 gc.PushState()
                 gc.ConcatTransform(wx.GraphicsContext.CreateMatrix(gc, ZMatrix(matrix)))
                 cache = None
@@ -87,11 +88,11 @@ class LaserRender:
                 if cache_id != id(image.image):
                     cache = None
                 if cache is None:
-                    max_allowed = 2048
+                    # max_allowed = 2048
                     cut.c_width, cut.c_height = image.image.size
-                    cut.cache = self.make_thumbnail(image.image, maximum=max_allowed)
+                    cut.cache = self.make_thumbnail(image.image)
                     cut.cache_id = id(image.image)
-                gc.DrawBitmap(cut.cache, x, y, cut.c_width, cut.c_height)
+                gc.DrawBitmap(cut.cache, 0, 0, cut.c_width, cut.c_height)
                 gc.PopState()
             last_point = end
         gc.StrokePath(p)
