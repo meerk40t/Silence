@@ -577,6 +577,7 @@ class Silence(MWindow, Job):
         self.context.listen("bed_size", self.on_bed_changed)
         self.context.listen("units", self.on_space_changed)
         self.context.listen("draw_mode", self.on_draw_mode)
+        self.context.listen("statusbar", self.on_statusbar)
         self.on_draw_mode(self.context.draw_mode)
 
         bed_dim = self.context.get_context("bed")
@@ -687,6 +688,7 @@ class Silence(MWindow, Job):
 
     def window_close(self):
         self.context("quit\n")
+        self.context.unlisten("statusbar", self.on_statusbar)
         self.context.unlisten("rotary_enable", self.on_rotary_enable)
         self.context.unlisten("halftone", self.on_halftone)
         self.context.unlisten("op_setting_update", self.on_op_setting_update)
@@ -694,7 +696,7 @@ class Silence(MWindow, Job):
         self.context.unlisten("units", self.on_space_changed)
         self.context.unlisten("draw_mode", self.on_draw_mode)
 
-    def statusbar(self, message=None, color=None):
+    def on_statusbar(self, message=None, color=None):
         if message is None:
             silence_statusbar_fields = [
                 "Current Position: X=%f Y=%f (W X H)=(%fmm X %fmm)" % (self.context.current_x, self.context.current_y, self.context.current_width, self.context.current_height),
@@ -724,7 +726,7 @@ class Silence(MWindow, Job):
         self.silence_statusbar.SetStatusWidths([-1])
 
         # statusbar fields
-        self.statusbar()
+        self.on_statusbar()
         self.button_usb_init.SetToolTip(
             'Establish connection with the laser controller board, and optionally Home the laser depending on the setting in the General settings window for "Home Upon initialize"'
         )
@@ -1280,7 +1282,7 @@ class Silence(MWindow, Job):
         :param args:
         :return:
         """
-        self.statusbar()
+        self.on_statusbar()
         self.request_refresh()
 
     def on_erase(self, event):

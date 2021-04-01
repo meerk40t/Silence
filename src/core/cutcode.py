@@ -1,4 +1,3 @@
-from copy import copy
 from math import isinf, isnan
 
 from ..svgelements import Color, Path, Point

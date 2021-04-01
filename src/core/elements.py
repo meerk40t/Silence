@@ -227,6 +227,10 @@ class ElementCore(Modifier):
                 channel(_("Nothing to Execute"))
                 return
             name, cutcode, op_set = data
+            if not len(cutcode):
+                self.context.signal("statusbar", _("No %s data to send") % name, 2)
+                return
+
             for i in range(op_set.implicit_passes):
                 self.context.get_context('/').spooler.job(cutcode)
             return "op", data
