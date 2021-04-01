@@ -438,7 +438,6 @@ class LhystudioController(Module):
         if self.connection is not None:
             self.connection.release()
 
-
     def reset(self):
         self.update_state(STATE_INITIALIZE)
 

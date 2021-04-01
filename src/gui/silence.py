@@ -536,7 +536,7 @@ class Silence(MWindow, Job):
             help="design_load <filename>",
         )
         def plan(command, channel, _, filename=None, args=tuple(), **kwargs):
-            self.tryopen(None)
+            self.tryopen(filename)
 
         self.context.setting(str, "working_file", None)
         self.context.setting(float, "jog_step", 10.0)
@@ -627,23 +627,21 @@ class Silence(MWindow, Job):
         self.context.setting(bool, "uniform_svg", False)
         self.context.setting(float, "svg_ppi", 96.0)
         self.context("raster clear\ncut clear\nengrave clear\n")
+        self.context.working_file = pathname
         with wx.BusyInfo(_("Loading File...")):
-            if pathname.endswith("png"):
-                pass
+            if pathname.endswith("svg"):
+                self.context('inkscape input "%s" text2path load makepng load image wizard Gravy\n' % pathname)
+                return True
+
             results = self.context.load(
                 pathname,
                 channel=self.context.channel("load"),
                 svg_ppi=self.context.svg_ppi,
             )
+            if pathname.lower().endswith("png") or pathname.lower().endswith("jpg"):
+                self.context("image wizard Gravy\n")
             self.request_refresh()
-            if results:
-                try:
-                    if self.context.uniform_svg and pathname.lower().endswith("svg"):
-                        self.context.working_file = pathname
-                except AttributeError:
-                    pass
-                return True
-            return False
+            return bool(results)
 
     def on_drop_file(self, event):
         """
