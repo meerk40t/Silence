@@ -30,7 +30,7 @@ class ElementCore(Modifier):
         )
         self.gcode = CutCode()
         self.gcode_settings = LaserSettings(
-            operation="GCode", color="black", speed=140.0
+            operation="GCode", color="black", speed=140.0, passes_custom=True, passes=1,
         )
 
     def engrave_cutcode(self, objects):
@@ -61,10 +61,6 @@ class ElementCore(Modifier):
                 c.append(RasterCut(object_image, cross_settings))
             else:
                 c.append(RasterCut(object_image, settings))
-        if settings.passes_custom:
-            c *= settings.passes
-        if len(c) == 0:
-            return None
         return c
 
     def raster_cutcode(self, objects):
@@ -85,14 +81,9 @@ class ElementCore(Modifier):
                 if not isinstance(object_image, SVGImage):
                     continue
                 c.append(RasterCut(object_image, settings))
-        if settings.passes_custom:
-            c *= settings.passes
-        if len(c) == 0:
-            return None
         return c
 
-    def _vector_cutcode(self, c, settings, objects):
-        # TODO: This won't quite work as we're adding to the static c object in elements.
+    def _vector_cutcode(self, cutcode: CutCode, settings: LaserSettings, objects: list):
         for object_path in objects:
             if isinstance(object_path, SVGImage):
                 box = object_path.bbox()
@@ -114,15 +105,15 @@ class ElementCore(Modifier):
                 if isinstance(seg, Move):
                     pass  # Move operations are ignored.
                 elif isinstance(seg, Close):
-                    c.append(LineCut(seg.start, seg.end, settings=settings))
+                    cutcode.append(LineCut(seg.start, seg.end, settings=settings))
                 elif isinstance(seg, Line):
-                    c.append(LineCut(seg.start, seg.end, settings=settings))
+                    cutcode.append(LineCut(seg.start, seg.end, settings=settings))
                 elif isinstance(seg, QuadraticBezier):
-                    c.append(
+                    cutcode.append(
                         QuadCut(seg.start, seg.control, seg.end, settings=settings)
                     )
                 elif isinstance(seg, CubicBezier):
-                    c.append(
+                    cutcode.append(
                         CubicCut(
                             seg.start,
                             seg.control1,
@@ -133,7 +124,7 @@ class ElementCore(Modifier):
                     )
                 elif isinstance(seg, Arc):
                     for s in seg.as_cubic_curves():
-                        c.append(
+                        cutcode.append(
                             CubicCut(
                                 s.start,
                                 s.control1,
@@ -142,11 +133,7 @@ class ElementCore(Modifier):
                                 settings=settings,
                             )
                         )
-        if settings.passes_custom:
-            c *= settings.passes
-        if len(c) == 0:
-            return None
-        return c
+        return cutcode
 
     def attach(self, *a, **kwargs):
         context = self.context
