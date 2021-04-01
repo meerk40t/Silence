@@ -8,7 +8,7 @@ def plugin(kernel, lifecycle):
 
         @kernel.console_command(
             "load",
-            help="simplify path",
+            help="load processed file",
             input_type="inkscape",
             output_type="inkscape",
         )
@@ -50,6 +50,7 @@ def plugin(kernel, lifecycle):
             c = run(
                 [
                     inkscape_path,
+                    "--export-area-drawing",
                     "--export-text-to-path",
                     "--export-plain-svg",
                     "--export-filename=temp.svg",

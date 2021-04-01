@@ -1516,14 +1516,6 @@ class ImageLoader:
         image.load()
         if image.image is None:
             return False
-        try:
-            context.setting(bool, "image_dpi", True)
-            if context.image_dpi:
-                dpi = image.image.info["dpi"]
-                if isinstance(dpi, tuple):
-                    image *= "scale(%f,%f)" % (1000.0 / dpi[0], 1000.0 / dpi[1])
-        except (KeyError, IndexError):
-            pass
 
         elements_modifier.raster_cutcode([image])
         return True

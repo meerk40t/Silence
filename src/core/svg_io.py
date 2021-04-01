@@ -50,16 +50,16 @@ class SVGLoader:
                 pass
             except AttributeError:
                 pass
-            if isinstance(element, SVGText):
-                if element.text is None:
-                    continue
-                if element.stroke == "red":
-                    elements_modifier.cut_cutcode(element)
-                elif element.stroke == "blue":
-                    elements_modifier.engrave_cutcode(element)
-                else:
-                    elements_modifier.raster_cutcode(element)
-            elif isinstance(element, Path):
+            # if isinstance(element, SVGText):
+            #     if element.text is None:
+            #         continue
+            #     if element.stroke == "red":
+            #         elements_modifier.cut_cutcode(element)
+            #     elif element.stroke == "blue":
+            #         elements_modifier.engrave_cutcode(element)
+            #     else:
+            #         elements_modifier.raster_cutcode(element)
+            if isinstance(element, Path):
                 if len(element) == 0:
                     continue
                 element.approximate_arcs_with_cubics()

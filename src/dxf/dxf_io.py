@@ -1,5 +1,3 @@
-import os
-
 import ezdxf
 from ezdxf import units
 from ezdxf.tools.rgb import DXF_DEFAULT_COLORS, int2rgb

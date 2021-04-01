@@ -18,10 +18,12 @@ STATE_WAIT = 7  # Controller is waiting for something. This could be aborted.
 STATE_TERMINATE = 10
 
 
+# ("PARAM", r"([^ ,\t\n\x09\x0A\x0C\x0D]+)"),
 _cmd_parse = [
-    ("OPT", r"-([a-zA-Z]+)"),
+    ("OPT", r"-([a-zA-Z0-9]+)"),
     ("LONG", r"--([^ ,\t\n\x09\x0A\x0C\x0D]+)"),
-    ("PARAM", r"([^ ,\t\n\x09\x0A\x0C\x0D]+)"),
+    ("QPARAM", r"\"(.*?)\""),
+    ("PARAM", r"([^ \",\t\n\x09\x0A\x0C\x0D]+)"),
     ("SKIP", r"[ ,\t\n\x09\x0A\x0C\x0D]+"),
 ]
 _CMD_RE = re.compile("|".join("(?P<%s>%s)" % pair for pair in _cmd_parse))
@@ -1070,6 +1072,9 @@ class Kernel:
             if kind == "PARAM":
                 value = match.group()
                 yield kind, value, start, pos
+            if kind == "QPARAM":
+                value = match.group()
+                yield "PARAM", value[1:-1], start, pos
             elif kind == "LONG":
                 value = match.group()
                 yield kind, value[2:], start, pos
