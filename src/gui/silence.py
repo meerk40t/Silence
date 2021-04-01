@@ -720,7 +720,7 @@ class Silence(MWindow, Job):
 
     def __set_properties(self):
         # begin wxGlade: Silence.__set_properties
-        self.SetTitle("Silence")
+        self.SetTitle("%s v%s" % (self.context._kernel.name, self.context._kernel.version))
         self.silence_statusbar.SetStatusWidths([-1])
 
         # statusbar fields
