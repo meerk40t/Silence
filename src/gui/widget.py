@@ -557,7 +557,7 @@ class RasterImageWidget(Widget):
         if self.scene.context.draw_mode & DRAW_MODE_RASTER == 0:
             return
         context = self.scene.context
-        self.renderer.render_raster(self.root.raster, gc, x=context.offset_x, y=context.offset_y)
+        self.renderer.render_raster(self.root.raster, gc, x=-context.offset_x, y=-context.offset_y)
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
         return RESPONSE_DROP
@@ -576,7 +576,7 @@ class VectorEngraveWidget(Widget):
         if self.scene.context.draw_mode & DRAW_MODE_ENGRAVE == 0:
             return
         context = self.scene.context
-        self.renderer.render_engrave(self.root.engrave, gc, x=context.offset_x, y=context.offset_y)
+        self.renderer.render_engrave(self.root.engrave, gc, x=-context.offset_x, y=-context.offset_y)
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
         return RESPONSE_DROP
@@ -595,7 +595,7 @@ class VectorCutWidget(Widget):
         if self.scene.context.draw_mode & DRAW_MODE_CUT == 0:
             return
         context = self.scene.context
-        self.renderer.render_cut(self.root.cut, gc, x=context.offset_x, y=context.offset_y)
+        self.renderer.render_cut(self.root.cut, gc, x=-context.offset_x, y=-context.offset_y)
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
         return RESPONSE_DROP
@@ -614,7 +614,7 @@ class GCodePathsWidget(Widget):
         if self.scene.context.draw_mode & DRAW_MODE_GCODE == 0:
             return
         context = self.scene.context
-        self.renderer.render_gcode(self.root.gcode, gc, x=context.offset_x, y=context.offset_y)
+        self.renderer.render_gcode(self.root.gcode, gc, x=-context.offset_x, y=-context.offset_y)
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
         return RESPONSE_DROP
@@ -636,8 +636,8 @@ class ReticleWidget(Widget):
         gc.SetPen(wx.BLACK_PEN)
 
         gc.SetBrush(self.brush)
-        x = int(context.offset_x)
-        y = int(context.offset_y)
+        x = -int(context.offset_x)
+        y = -int(context.offset_y)
         if x is None or y is None:
             x = 0
             y = 0

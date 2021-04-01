@@ -58,7 +58,7 @@ def plugin(kernel, lifecycle=None):
                 yield COMMAND_SET_INCREMENTAL
                 yield COMMAND_MODE_RAPID
                 yield COMMAND_MOVE, int(x_pos), int(y_pos)
-                yield COMMAND_INC_OFFSET, int(x_pos), int(y_pos)
+                yield COMMAND_INC_OFFSET, -int(x_pos), -int(y_pos)
                 yield COMMAND_SET_ABSOLUTE
                 context.signal("refresh_scene", 1)
 
@@ -170,6 +170,15 @@ def plugin(kernel, lifecycle=None):
                 return
             pipe.usb_release()
             return "device", data
+
+        @kernel.console_command("status", input_type="device", output_type="device")
+        def reset(channel, _, data, **kwargs):
+            try:
+                channel(_("Status: %s" % data.interpreter.interpreter_status()))
+                return "device", data
+            except AttributeError:
+                channel(_("Device Uninitialized."))
+
 
         @context.console_command(
             "spooler",
@@ -823,8 +832,6 @@ class Interpreter:
         self.context.current_x += self.context.offset_x
         self.context.current_y += self.context.offset_y
 
-        self.context.current_y = y
-
     def inc_offset(self, dx, dy):
         """
         Increments the offset from true position.
@@ -844,14 +851,19 @@ class Interpreter:
         self.spooled_item = None
         self.temp_holds.clear()
 
-    def status(self):
+    def interpreter_status(self):
         parts = list()
         parts.append("x=%f" % self.context.current_x)
         parts.append("y=%f" % self.context.current_y)
+        parts.append("dx=%f" % self.context.offset_x)
+        parts.append("dy=%f" % self.context.offset_y)
         parts.append("speed=%f" % self.settings.speed)
         parts.append("power=%d" % self.settings.power)
-        status = ";".join(parts)
-        self.context.signal("interpreter;status", status)
+        return ";".join(parts)
+
+    def status(self):
+        st = self.interpreter_status()
+        self.context.signal("interpreter;status", st)
 
     def set_prop(self, mask):
         self.properties |= mask
