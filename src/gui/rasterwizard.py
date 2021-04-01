@@ -8,7 +8,7 @@ from copy import deepcopy
 from math import ceil
 
 import wx
-from svgelements import Matrix, SVGImage
+from ..svgelements import Matrix, SVGImage
 
 from ..image.imagetools import RasterScripts
 from .icons import icons8_fantasy_50

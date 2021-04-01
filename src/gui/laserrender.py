@@ -1,5 +1,5 @@
 import wx
-from svgelements import (Color, Matrix)
+from ..svgelements import (Color, Matrix)
 
 from .zmatrix import ZMatrix
 from ..core.cutcode import LineCut, QuadCut, CubicCut, CutCode, RasterCut

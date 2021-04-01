@@ -1,5 +1,5 @@
 
-from svgelements import Color, SVGImage, Path, Polygon, Move, Close, Line, QuadraticBezier, CubicBezier, Arc
+from ..svgelements import Color, SVGImage, Path, Polygon, Move, Close, Line, QuadraticBezier, CubicBezier, Arc
 
 from ..kernel import Modifier
 from .cutcode import CutCode, LaserSettings, LineCut, QuadCut, CubicCut, RasterCut

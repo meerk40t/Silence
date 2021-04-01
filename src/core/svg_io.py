@@ -1,6 +1,6 @@
 import os
 
-from svgelements import (SVG, Group, Path, Shape, SVGImage, SVGText)
+from ..svgelements import (SVG, Group, Path, Shape, SVGImage, SVGText)
 
 MILS_PER_MM = 39.3701
 

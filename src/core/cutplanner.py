@@ -1,7 +1,7 @@
 from copy import copy
 from math import ceil, isinf, isnan
 
-from svgelements import (Group, Move, Path, Point,
+from ..svgelements import (Group, Move, Path, Point,
                          Polygon, Polyline, SVGElement, SVGImage, SVGText)
 
 from ..core.cutcode import CutCode

@@ -2,7 +2,7 @@ from copy import copy
 from math import ceil
 from os import path as ospath
 
-from svgelements import Angle, Color, Length, Matrix, Path, SVGImage
+from ..svgelements import Angle, Color, Length, Matrix, Path, SVGImage
 
 from ..core.cutplanner import Planner
 

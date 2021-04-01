@@ -2,7 +2,7 @@ import os
 import time
 from threading import Lock
 
-from svgelements import Length
+from ..svgelements import Length
 
 from ..core.cutcode import LaserSettings
 from ..kernel import Modifier

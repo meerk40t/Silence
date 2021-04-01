@@ -1,7 +1,7 @@
 from copy import copy
 from math import isinf, isnan
 
-from svgelements import Color, Path, Point
+from ..svgelements import Color, Path, Point
 
 from ..device.lasercommandconstants import COMMAND_PLOT, COMMAND_PLOT_START
 from .rasterplotter import (BOTTOM, LEFT, RIGHT, TOP, UNIDIRECTIONAL, X_AXIS,

@@ -8,7 +8,7 @@ except ImportError:
     tau = 2 * pi
 
 from ..kernel import Module
-from svgelements import  Point
+from ..svgelements import  Point
 from .laserrender import *
 from .zmatrix import ZMatrix
 
