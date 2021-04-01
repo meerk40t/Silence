@@ -1020,7 +1020,7 @@ class Silence(MWindow, Job):
         self.context.console("egv_load\n")
 
     def on_menu_egv_save(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.console("window open EgvLoad\n")
+        self.context.console("window open EgvSave\n")
 
     def on_menu_exit(self, event):  # wxGlade: Silence.<event_handler>
         self.context.console("quit\n")
