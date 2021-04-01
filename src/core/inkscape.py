@@ -129,7 +129,7 @@ def plugin(kernel, lifecycle):
         def locate(channel, _, data, **kwargs):
             if "darwin" in platform:
                 inkscape = [
-                    "/Applications/Inkscape.app/Contents/MacOS/Inkscape"
+                    "/Applications/Inkscape.app/Contents/MacOS/Inkscape",
                     "/Applications/Inkscape.app/Contents/Resources/bin/inkscape"
                 ]
             elif "win" in platform:
