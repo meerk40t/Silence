@@ -1,9 +1,24 @@
+# Getting Silence
+Download a precompiled release:
+
+https://github.com/meerk40t/Silence/releases
+
+or
+
+Install via Pip
+* `pip install K40Silence`
+* `silence`
+
+And you're all set!
+
 # Silence
 Silence is a hybrid K40Whisperer/MeerK40t/April-Fools-Joke
 
 The name is a pun as to silence some criticism, and a more extreme form of whisperer.
 
 ![silence](https://user-images.githubusercontent.com/3302478/113282245-84c4ac80-929b-11eb-87c0-2375071b6a76.png)
+
+
 
 # Devices
 This is intended to work with either windows or libusb drivers for either Lhystudios boards or Moshiboards (no rastering).
