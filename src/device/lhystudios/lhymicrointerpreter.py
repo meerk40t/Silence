@@ -896,6 +896,8 @@ class LhymicroInterpreter(Interpreter, Modifier):
             adjust_y = int(values[1])
         except (ValueError, IndexError):
             pass
+        self.context.offset_y = adjust_x
+        self.context.offset_x = adjust_y
         if adjust_x != 0 or adjust_y != 0:
             # Perform post home adjustment.
             self.move_relative(adjust_x, adjust_y)
@@ -904,6 +906,7 @@ class LhymicroInterpreter(Interpreter, Modifier):
             self.context.current_y = y
 
         self.context.signal("interpreter;mode", self.state)
+        self.context.signal("refresh_scene", 1)
         # self.context.signal('interpreter;position', (self.context.current_x, self.context.current_y, old_x, old_y))
 
     def lock_rail(self):
