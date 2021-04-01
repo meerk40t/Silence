@@ -82,18 +82,16 @@ class DxfLoader:
                         e *= matrix
                 # else, is within the bed dimensions correctly, change nothing.
         for e in elements:
-            try:
-                e.reify()
-            except AttributeError:
-                pass
-        element_branch = elements_modifier.get(type="branch elems")
-        basename = os.path.basename(pathname)
-
-        file_node = element_branch.add(type="file", name=basename)
-        file_node.filepath = pathname
-        file_node.add_all(elements, type="elem")
-
-        elements_modifier.classify(elements)
+            if len(e) == 0:
+                continue
+            e.approximate_arcs_with_cubics()
+            if e.stroke == "red":
+                elements_modifier.cut_cutcode([abs(e)])
+            elif e.stroke == "blue":
+                elements_modifier.engrave_cutcode([abs(e)])
+            else:
+                elements_modifier.gcode_cutcode([e])
+                elements_modifier.raster_cutcode([abs(e)])
         return True
 
     @staticmethod
@@ -330,7 +328,9 @@ class DxfLoader:
         element.transform.post_translate_y(translate_y)
 
         if isinstance(element, SVGText):
-            elements.append(element)
+            # Silence doesn't process text objects.
+            # elements.append(element)
+            pass
         else:
             element.values[SVG_ATTR_VECTOR_EFFECT] = SVG_VALUE_NON_SCALING_STROKE
             path = abs(Path(element))

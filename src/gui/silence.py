@@ -726,7 +726,7 @@ class Silence(MWindow, Job):
         self.silence_statusbar.SetStatusWidths([-1])
 
         # statusbar fields
-        self.on_statusbar()
+        self.on_statusbar(_("Welcome to Silence"))
         self.button_usb_init.SetToolTip(
             'Establish connection with the laser controller board, and optionally Home the laser depending on the setting in the General settings window for "Home Upon initialize"'
         )

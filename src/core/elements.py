@@ -43,6 +43,11 @@ class ElementCore(Modifier):
         settings = self.cut_settings
         self._vector_cutcode(c, settings, objects)
 
+    def gcode_cutcode(self, objects):
+        c = self.gcode
+        settings = self.gcode_settings
+        self._vector_cutcode(c, settings, objects)
+
     def image_cutcode(self, objects):
         c = self.raster
         settings = self.raster_settings
