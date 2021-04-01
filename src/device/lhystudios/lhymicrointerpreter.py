@@ -288,6 +288,8 @@ class LhymicroInterpreter(Interpreter, Modifier):
         context.setting(int, "home_adjust_y", 0)
         context.setting(int, "current_x", 0)
         context.setting(int, "current_y", 0)
+        context.setting(int, "offset_x", 0)
+        context.setting(int, "offset_y", 0)
         root_context.setting(bool, "opt_rapid_between", True)
         root_context.setting(int, "opt_jog_mode", 0)
         root_context.setting(int, "opt_jog_minimum", 127)

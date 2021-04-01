@@ -237,6 +237,7 @@ class ElementCore(Modifier):
                 return
 
             for i in range(op_set.implicit_passes):
+                cutcode.set_offset(context.offset_x, context.offset_y)
                 self.context.get_context('/').spooler.job(cutcode)
             return "op", data
 

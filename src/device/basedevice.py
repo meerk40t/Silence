@@ -58,6 +58,8 @@ def plugin(kernel, lifecycle=None):
                 yield COMMAND_MODE_RAPID
                 yield COMMAND_MOVE, int(x_pos), int(y_pos)
                 yield COMMAND_SET_ABSOLUTE
+                context.offset_x += int(x_pos)
+                context.offset_y += int(y_pos)
                 context.signal("refresh_scene", 1)
 
             return move
@@ -328,6 +330,7 @@ def plugin(kernel, lifecycle=None):
                 spooler.job(COMMAND_HOME, int(x), int(y))
                 return 'device', data
             spooler.job(COMMAND_HOME)
+            context.signal("refresh_scene", 1)
             return 'device', data
 
         @context.console_command("unlock", input_type=("device", None), output_type='device', help="unlock the rail")
@@ -398,6 +401,8 @@ class Interpreter:
         self.laser = False
         context.setting(int, "current_x", 0)
         context.setting(int, "current_y", 0)
+        context.setting(int, "offset_x", 0)
+        context.setting(int, "offset_y", 0)
         self.root_context.setting(bool, "opt_rapid_between", True)
         self.root_context.setting(int, "opt_jog_mode", 0)
         self.root_context.setting(int, "opt_jog_minimum", 127)
@@ -405,6 +410,8 @@ class Interpreter:
 
         context.current_x = 0
         context.current_y = 0
+        context.offset_x = 0
+        context.offset_y = 0
         self.rapid = self.root_context.opt_rapid_between
         self.jog = self.root_context.opt_jog_mode
         self.rapid_override = False
@@ -576,6 +583,8 @@ class Interpreter:
                 self.set_absolute()
             elif command == COMMAND_SET_POSITION:
                 self.set_position(values[0], values[1])
+            elif command == COMMAND_SET_OFFSET:
+                self.set_offset(values[0], values[1])
             elif command == COMMAND_MODE_RAPID:
                 self.ensure_rapid_mode()
             elif command == COMMAND_MODE_PROGRAM:
@@ -712,6 +721,8 @@ class Interpreter:
     def home(self, *values):
         self.context.current_x = 0
         self.context.current_y = 0
+        self.context.offset_x = 0
+        self.context.offset_y = 0
 
     def ensure_rapid_mode(self, *values):
         if self.state == INTERPRETER_STATE_RAPID:
@@ -780,8 +791,36 @@ class Interpreter:
         self.is_relative = False
 
     def set_position(self, x, y):
+        """
+        Sets the current position to equal x, y.
+
+        real_position = Current position - offset_position.
+        offset_position = current_position - real_position
+        """
+        self.context.current_x -= self.context.offset_x
+        self.context.current_y -= self.context.offset_y
+        # Current position is now real position.
+        self.context.offset_x = x - self.context.current_x
+        self.context.offset_y = y - self.context.current_y
+        # Offset is now the difference of the set_position and the real_position.
         self.context.current_x = x
         self.context.current_y = y
+
+    def set_offset(self, x, y):
+        """
+        Sets the offset from true position.
+
+        real_position = Current position - offset_position.
+        """
+        self.context.current_x -= self.context.offset_x
+        self.context.current_y -= self.context.offset_y
+        # Current position is now real position.
+        self.context.offset_x = x
+        self.context.offset_y = y
+        # Offset is now the difference of the set_position and real position.
+        self.context.current_x += self.context.offset_x
+        self.context.current_y += self.context.offset_y
+
 
     def wait(self, t):
         # TODO: This doesn't work without scheduler.

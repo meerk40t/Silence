@@ -2,7 +2,7 @@ from math import isinf, isnan
 
 from ..svgelements import Color, Path, Point
 
-from ..device.lasercommandconstants import COMMAND_PLOT, COMMAND_PLOT_START
+from ..device.lasercommandconstants import COMMAND_PLOT, COMMAND_PLOT_START, COMMAND_SET_OFFSET
 from .rasterplotter import (BOTTOM, LEFT, RIGHT, TOP, UNIDIRECTIONAL, X_AXIS,
                             Y_AXIS, RasterPlotter)
 from .zinglplotter import ZinglPlotter
@@ -112,11 +112,17 @@ class CutCode(list):
         list.__init__(self)
         self.output = True
         self.operation = "CutCode"
+        self.offset_x = 0
+        self.offset_y = 0
 
     def __str__(self):
         parts = list()
         parts.append("%d items" % len(self))
         return "CutCode(%s)" % " ".join(parts)
+
+    def set_offset(self, x, y):
+        self.offset_x = x
+        self.offset_y = y
 
     def as_elements(self):
         elements = list()
@@ -164,6 +170,8 @@ class CutCode(list):
         self[j:k] = self[j:k][::-1]
 
     def generate(self):
+        if self.offset_x != 0 or self.offset_y != 0:
+            yield COMMAND_SET_OFFSET, self.offset_x, self.offset_y
         for cutobject in self:
             yield COMMAND_PLOT, cutobject
         yield COMMAND_PLOT_START

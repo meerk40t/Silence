@@ -47,10 +47,10 @@ class Silence(MWindow, Job):
         self.context.setting(int, "units_marks", 10)
         self.context.setting(int, "units_index", 0)
         self.context.setting(str, "board", "M2")
-        self.context.setting(int, "current_x", 0)
-        self.context.setting(int, "current_y", 0)
-        self.context.setting(int, "current_width", 0)
-        self.context.setting(int, "current_height", 0)
+        self.context.setting(int, "offset_x", 0)
+        self.context.setting(int, "offset_y", 0)
+        self.context.setting(int, "offset_width", 0)
+        self.context.setting(int, "offset_height", 0)
         self._Buffer = None
 
         self.widget_scene = self.root_context.open("module/Scene")
@@ -630,7 +630,7 @@ class Silence(MWindow, Job):
         self.context.working_file = pathname
         with wx.BusyInfo(_("Loading File...")):
             if pathname.endswith("svg"):
-                self.context('inkscape input "%s" text2path load makepng load image wizard Gravy\n' % pathname)
+                self.context('inkscape locate input "%s" text2path load makepng load image wizard Gravy\n' % pathname)
                 return True
 
             results = self.context.load(
@@ -697,7 +697,7 @@ class Silence(MWindow, Job):
     def on_statusbar(self, message=None, color=None):
         if message is None:
             silence_statusbar_fields = [
-                "Current Position: X=%f Y=%f (W X H)=(%fmm X %fmm)" % (self.context.current_x, self.context.current_y, self.context.current_width, self.context.current_height),
+                "Current Position: X=%f Y=%f (W X H)=(%fmm X %fmm)" % (self.context.offset_x, self.context.offset_y, self.context.offset_width, self.context.offset_height),
             ]
         else:
             silence_statusbar_fields = [

@@ -160,7 +160,7 @@ def plugin(kernel, lifecycle):
                 channel("Searching: %s -- Result: %s" % (ink, result))
             channel(_("----------"))
             if match is None:
-                return
+                raise ModuleNotFoundError
             root_context = kernel.get_context("/")
             root_context.setting(str, "inkscape_path", "inkscape.exe")
             root_context.inkscape_path = match
