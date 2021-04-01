@@ -313,7 +313,7 @@ class Silence(MWindow, Job):
         self.silence_menubar.Append(wxglade_tmp_menu, "Help")
         self.SetMenuBar(self.silence_menubar)
         # Menu Bar end
-        self.silence_statusbar = self.CreateStatusBar(2)
+        self.silence_statusbar = self.CreateStatusBar(1)
         self.panel_6 = wx.Panel(self, wx.ID_ANY)
         self.button_usb_init = wx.Button(
             self.panel_6, wx.ID_ANY, "Initialize Laser Cutter"
@@ -694,24 +694,34 @@ class Silence(MWindow, Job):
         self.context.unlisten("units", self.on_space_changed)
         self.context.unlisten("draw_mode", self.on_draw_mode)
 
-    def statusbar(self, message=None):
+    def statusbar(self, message=None, color=None):
         if message is None:
             silence_statusbar_fields = [
                 "Current Position: X=%f Y=%f (W X H)=(%fmm X %fmm)" % (self.context.current_x, self.context.current_y, self.context.current_width, self.context.current_height),
-                "",
             ]
         else:
             silence_statusbar_fields = [
                 message,
-                "",
             ]
+        if color is None:
+            self.silence_statusbar.SetBackgroundColour(wx.WHITE)
+        elif color == 1:
+            self.silence_statusbar.SetBackgroundColour(wx.CYAN)
+        elif color == 2:
+            self.silence_statusbar.SetBackgroundColour(wx.YELLOW)
+        elif color == 3:
+            self.silence_statusbar.SetBackgroundColour(wx.RED)
+        elif color == 4:
+            self.silence_statusbar.SetBackgroundColour(wx.GREEN)
+        elif color == 5:
+            self.silence_statusbar.SetBackgroundColour(wx.BLUE)
         for i in range(len(silence_statusbar_fields)):
             self.silence_statusbar.SetStatusText(silence_statusbar_fields[i], i)
 
     def __set_properties(self):
         # begin wxGlade: Silence.__set_properties
         self.SetTitle("Silence")
-        self.silence_statusbar.SetStatusWidths([-1, 0])
+        self.silence_statusbar.SetStatusWidths([-1])
 
         # statusbar fields
         self.statusbar()
