@@ -200,7 +200,7 @@ class ElementCore(Modifier):
                     if setv.startswith('_') or setv.startswith('implicit'):
                         continue
                     v = getattr(op_set, setv)
-                    if not isinstance(v, (int,float,str,complex,Color)):
+                    if not isinstance(v, (int, float, str, complex, Color)):
                         continue
                     channel("%s=%s" % (setv, str(v)))
                 return

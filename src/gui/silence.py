@@ -47,6 +47,10 @@ class Silence(MWindow, Job):
         self.context.setting(int, "units_marks", 10)
         self.context.setting(int, "units_index", 0)
         self.context.setting(str, "board", "M2")
+        self.context.setting(int, "current_x", 0)
+        self.context.setting(int, "current_y", 0)
+        self.context.setting(int, "current_width", 0)
+        self.context.setting(int, "current_height", 0)
         self._Buffer = None
 
         self.widget_scene = self.root_context.open("module/Scene")
@@ -690,18 +694,27 @@ class Silence(MWindow, Job):
         self.context.unlisten("units", self.on_space_changed)
         self.context.unlisten("draw_mode", self.on_draw_mode)
 
+    def statusbar(self, message=None):
+        if message is None:
+            silence_statusbar_fields = [
+                "Current Position: X=%f Y=%f (W X H)=(%fmm X %fmm)" % (self.context.current_x, self.context.current_y, self.context.current_width, self.context.current_height),
+                "",
+            ]
+        else:
+            silence_statusbar_fields = [
+                message,
+                "",
+            ]
+        for i in range(len(silence_statusbar_fields)):
+            self.silence_statusbar.SetStatusText(silence_statusbar_fields[i], i)
+
     def __set_properties(self):
         # begin wxGlade: Silence.__set_properties
         self.SetTitle("Silence")
         self.silence_statusbar.SetStatusWidths([-1, 0])
 
         # statusbar fields
-        silence_statusbar_fields = [
-            "Current Position: X=%f Y=%f (W X H)=(%fmm X %fmm)",
-            "",
-        ]
-        for i in range(len(silence_statusbar_fields)):
-            self.silence_statusbar.SetStatusText(silence_statusbar_fields[i], i)
+        self.statusbar()
         self.button_usb_init.SetToolTip(
             'Establish connection with the laser controller board, and optionally Home the laser depending on the setting in the General settings window for "Home Upon initialize"'
         )
@@ -1257,6 +1270,7 @@ class Silence(MWindow, Job):
         :param args:
         :return:
         """
+        self.statusbar()
         self.request_refresh()
 
     def on_erase(self, event):
