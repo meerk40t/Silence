@@ -43,6 +43,7 @@ def plugin(kernel, lifecycle=None):
                 yield COMMAND_MODE_RAPID
                 yield COMMAND_MOVE, int(x_pos), int(y_pos)
                 yield COMMAND_SET_OFFSET, -int(x_pos), -int(y_pos)
+                context.signal("refresh_scene", 1)
 
             return move
 
