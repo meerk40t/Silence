@@ -1058,10 +1058,10 @@ class Silence(MWindow, Job):
         self.context.console("device -p / init Lhystudios activate start\n")
 
     def on_menu_reset_usb(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.console("usb reset\n")
+        self.context.console("device reset\n")
 
     def on_menu_release_usb(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.console("usb release\n")
+        self.context.console("device release\n")
 
     def on_menu_settings_general(self, event):  # wxGlade: Silence.<event_handler>
         self.context.console("window open GeneralSettings\n")

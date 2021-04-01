@@ -430,6 +430,15 @@ class LhystudioController(Module):
         self.context.signal("pipe;buffer", 0)
         self.update_state(STATE_TERMINATE)
 
+    def usb_reset(self):
+        if self.connection is not None:
+            self.connection.reset()
+
+    def usb_release(self):
+        if self.connection is not None:
+            self.connection.release()
+
+
     def reset(self):
         self.update_state(STATE_INITIALIZE)
 

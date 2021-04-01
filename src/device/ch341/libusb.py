@@ -36,6 +36,12 @@ class CH341Driver(CH341Connection):
             raise ConnectionRefusedError  # No more devices.
         return val
 
+    def reset(self):
+        self.driver.disconnect_reset_index(self.driver_index)
+
+    def release(self):
+        self.driver.disconnect_dispose_index(self.driver_index)
+
     def open(self):
         """
         Opens the driver for unknown criteria.

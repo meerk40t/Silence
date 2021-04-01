@@ -149,6 +149,26 @@ def plugin(kernel, lifecycle=None):
             channel(_("Device %s, initialized at %s" % (device, data._path)))
             return "device", data
 
+        @kernel.console_command("reset", input_type="device", output_type="device")
+        def reset(channel, _, data, **kwargs):
+            try:
+                pipe = data.open("pipe")
+            except ValueError:
+                channel(_("Device not initialized."))
+                return
+            pipe.usb_reset()
+            return "device", data
+
+        @kernel.console_command("release", input_type="device", output_type="device")
+        def reset(channel, _, data, **kwargs):
+            try:
+                pipe = data.open("pipe")
+            except ValueError:
+                channel(_("Device not initialized."))
+                return
+            pipe.usb_release()
+            return "device", data
+
         @context.console_command(
             "spooler",
             help="spooler: list the spooled items for the current device",

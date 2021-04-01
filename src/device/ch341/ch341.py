@@ -11,6 +11,18 @@ class Connection:
         self.channel = channel
         self.state = state
 
+    def reset(self):
+        """
+        Resets the USB connection
+        """
+        pass
+
+    def release(self):
+        """
+        Releases the USB connection.
+        """
+        pass
+
     def validate(self):
         """
         Opens the connection to validate that it exists.

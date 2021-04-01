@@ -165,10 +165,10 @@ class RasterSettings(MWindow):
             pass
 
     def on_check_bottom2top(self, event):  # wxGlade: RasterSettings.<event_handler>
-        self.context.raster_bottom = self.check_bottom_up.Value
+        self.context.raster_bottom = self.check_bottom_up.GetValue()
 
     def on_check_halftone(self, event):  # wxGlade: RasterSettings.<event_handler>
-        self.context.halftone = self.check_halftone.Value
+        self.context.halftone = bool(self.check_halftone.GetValue())
         self.context.signal("halftone", self.context.halftone)
         self.toggle_disabled()
 
@@ -180,12 +180,12 @@ class RasterSettings(MWindow):
         )
 
     def on_slider_black(self, event):  # wxGlade: RasterSettings.<event_handler>
-        self.context.halftone_black = self.slider_raster_black.Value
+        self.context.halftone_black = float(self.slider_raster_black.GetValue())
 
     def on_slider_white(self, event):  # wxGlade: RasterSettings.<event_handler>
-        self.context.halftone_black = self.slider_raster_white.Value
+        self.context.halftone_black = float(self.slider_raster_white.GetValue())
 
     def on_slider_transition(self, event):  # wxGlade: RasterSettings.<event_handler>
-        self.context.halftone_black = self.slider_raster_transition.Value
+        self.context.halftone_black = float(self.slider_raster_transition.GetValue())
 
 # end of class RasterSettings

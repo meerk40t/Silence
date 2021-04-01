@@ -166,6 +166,10 @@ class Ch341LibusbDriver:
             self.channel(str(e))
             self.channel(_("Interface did not exist."))
 
+    def disconnect_dispose_index(self, index):
+        device = self.devices[index]
+        self.disconnect_dispose(device)
+
     def disconnect_dispose(self, device):
         _ = self.channel._
         try:
@@ -175,6 +179,10 @@ class Ch341LibusbDriver:
         except usb.core.USBError as e:
             self.channel(str(e))
             self.channel(_("Dispose Resources: Fail"))
+
+    def disconnect_reset_index(self, index):
+        device = self.devices[index]
+        self.disconnect_reset(device)
 
     def disconnect_reset(self, device):
         _ = self.channel._
