@@ -1,9 +1,5 @@
-from math import ceil, floor, sqrt
-
 import wx
-from PIL import Image
-from svgelements import (Arc, Close, Color, CubicBezier, Group, Line, Matrix,
-                         Move, Path, QuadraticBezier, Shape, SVGImage, SVGText)
+from svgelements import (Color, Matrix)
 
 from .zmatrix import ZMatrix
 from ..core.cutcode import LineCut, QuadCut, CubicCut, CutCode, RasterCut
@@ -11,7 +7,6 @@ from ..core.cutcode import LineCut, QuadCut, CubicCut, CutCode, RasterCut
 """
 Laser Render provides GUI relevant methods of displaying the given project.
 """
-
 
 DRAW_MODE_ESTIMATE = 0x000001
 DRAW_MODE_GUIDES = 0x000002
@@ -44,8 +39,16 @@ class LaserRender:
         self.pen = wx.Pen()
         self.brush = wx.Brush()
         self.color = wx.Colour()
+        self.cut_pen = wx.Pen(wx.Colour(swizzlecolor(Color(0xFF0000))))
+        self.engrave_pen = wx.Pen(wx.Colour(swizzlecolor(Color(0x0000FF))))
+        self.raster_pen = wx.Pen(wx.Colour(swizzlecolor(Color(0x000000))))
+        self.gcode_pen = wx.Pen(wx.Colour(swizzlecolor(Color(0x00FF00))))
+        self.cut_pen.SetWidth(10)
+        self.engrave_pen.SetWidth(10)
+        self.raster_pen.SetWidth(10)
+        self.gcode_pen.SetWidth(10)
 
-    def render_cutcode(self, cutcode: CutCode, gc: wx.GraphicsContext, x:int=0, y:int=0):
+    def render_cutcode(self, cutcode: CutCode, gc: wx.GraphicsContext, x: int = 0, y: int = 0):
         last_point = None
         p = gc.CreatePath()
         for cut in cutcode:
@@ -94,41 +97,40 @@ class LaserRender:
         gc.StrokePath(p)
         del p
 
-    def render_cut(self, cutcode: CutCode, gc: wx.GraphicsContext, x:int=0, y:int=0):
+    def render_cut(self, cutcode: CutCode, gc: wx.GraphicsContext, x: int = 0, y: int = 0):
         """
         Render scene information.
         """
         if not len(cutcode):
             return
-
-        gc.SetPen(wx.RED_PEN)
+        gc.SetPen(self.cut_pen)
         self.render_cutcode(cutcode, gc, x, y)
 
-    def render_engrave(self, cutcode: CutCode, gc: wx.GraphicsContext, x:int=0, y:int=0):
+    def render_engrave(self, cutcode: CutCode, gc: wx.GraphicsContext, x: int = 0, y: int = 0):
         """
         Render scene information.
         """
         if not len(cutcode):
             return
-        gc.SetPen(wx.BLUE_PEN)
+        gc.SetPen(self.engrave_pen)
         self.render_cutcode(cutcode, gc, x, y)
 
-    def render_raster(self, cutcode: CutCode, gc: wx.GraphicsContext, x:int=0, y:int=0):
+    def render_raster(self, cutcode: CutCode, gc: wx.GraphicsContext, x: int = 0, y: int = 0):
         """
         Render scene information.
         """
         if not len(cutcode):
             return
-        gc.SetPen(wx.BLACK_PEN)
+        gc.SetPen(self.raster_pen)
         self.render_cutcode(cutcode, gc, x, y)
 
-    def render_gcode(self, cutcode: CutCode, gc: wx.GraphicsContext, x:int=0, y:int=0):
+    def render_gcode(self, cutcode: CutCode, gc: wx.GraphicsContext, x: int = 0, y: int = 0):
         """
         Render scene information.
         """
         if not len(cutcode):
             return
-        gc.SetPen(wx.GREEN_PEN)
+        gc.SetPen(self.gcode_pen)
         self.render_cutcode(cutcode, gc, x, y)
 
     def make_thumbnail(self, pil_data, maximum=None, width=None, height=None):
