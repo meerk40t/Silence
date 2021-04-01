@@ -8,11 +8,16 @@ MILS_IN_MM = 39.3701
 class TraceBoundary(MWindow):
     def __init__(self, *args, **kwds):
         super().__init__(400, 300, *args, **kwds)
+        self.context.setting(int, "trace_power", 100)
+        self.context.setting(float, "trace_gap", 0.0)
+        self.context.setting(float, "trace_speed", 50)
+        self.context.setting(bool, "trace_laser_on", False)
         self.panel_25 = wx.Panel(self, wx.ID_ANY)
         self.checkbox_trace_laser = wx.CheckBox(self.panel_25, wx.ID_ANY, "")
-        self.text_trace_power = wx.TextCtrl(self.panel_25, wx.ID_ANY, "1000")
-        self.text_trace_gap = wx.TextCtrl(self.panel_25, wx.ID_ANY, "0")
-        self.text_trace_speed = wx.TextCtrl(self.panel_25, wx.ID_ANY, "50")
+        self.checkbox_trace_laser.SetValue(bool(self.context.trace_laser_on))
+        self.text_trace_power = wx.TextCtrl(self.panel_25, wx.ID_ANY, str(self.context.trace_power))
+        self.text_trace_gap = wx.TextCtrl(self.panel_25, wx.ID_ANY, str(self.context.trace_gap))
+        self.text_trace_speed = wx.TextCtrl(self.panel_25, wx.ID_ANY, str(self.context.trace_speed))
         self.button_trace = wx.Button(self.panel_25, wx.ID_ANY, "Trace")
 
         self.__set_properties()
@@ -75,27 +80,27 @@ class TraceBoundary(MWindow):
         # end wxGlade
 
     def on_check_trace_laser(self, event):  # wxGlade: TraceBoundary.<event_handler>
-        self.context.trace_laser_on = self.checkbox_trace_laser.Value
+        self.context.trace_laser_on = bool(self.checkbox_trace_laser.GetValue())
 
     def on_text_trace_power(self, event):  # wxGlade: TraceBoundary.<event_handler>
         try:
-            self.context.trace_power = int(self.text_trace_power.Value)
+            self.context.trace_power = int(self.text_trace_power.GetValue())
         except ValueError:
             pass
 
     def on_text_trace_gap(self, event):  # wxGlade: TraceBoundary.<event_handler>
         try:
-            self.context.trace_gap = float(self.text_trace_gap.Value)
+            self.context.trace_gap = float(self.text_trace_gap.GetValue())
         except ValueError:
             pass
 
     def on_text_trace_speed(self, event):  # wxGlade: TraceBoundary.<event_handler>
         try:
-            self.context.trace_speed = float(self.text_trace_speed.Value)
+            self.context.trace_speed = float(self.text_trace_speed.GetValue())
         except ValueError:
             pass
 
     def on_button_trace(self, event):  # wxGlade: TraceBoundary.<event_handler>
-        self.context.console("execute trace\n")
+        self.context.console("trace execute\n")
 
 # end of class TraceBoundary
