@@ -76,6 +76,8 @@ class Planner(Modifier):
         kernel.register("plan/wait", self.wait)
         kernel.register("plan/beep", self.beep)
         kernel.register("plan/interrupt", self.interrupt)
+        kernel.register("plan/report", self.report)
+        kernel.register("plan/batch", self.batch)
 
         # REQUIRES CUTPLANNER
 
@@ -654,6 +656,24 @@ class Planner(Modifier):
             input("waiting for user...")
 
         yield COMMAND_FUNCTION, intr
+
+    @staticmethod
+    def report():
+        yield COMMAND_WAIT_FINISH
+
+        def rep():
+            print("Execution completed.")
+
+        yield COMMAND_FUNCTION, rep
+
+    @staticmethod
+    def batch():
+        yield COMMAND_WAIT_FINISH
+
+        def bat():
+            print("Execute Batch File.")
+
+        yield COMMAND_FUNCTION, bat
 
     @staticmethod
     def reify_matrix(self):

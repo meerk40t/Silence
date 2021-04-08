@@ -153,6 +153,11 @@ class ElementCore(Modifier):
         context.engrave_settings = self.engrave_settings
         context.cut_settings = self.cut_settings
         context.raster_settings = self.raster_settings
+        self.context.setting(bool, "finish_unlock", False)
+        self.context.setting(bool, "finish_beep", False)
+        self.context.setting(bool, "finish_batch", False)
+        self.context.setting(bool, "finish_popup", False)
+        self.context.setting(str, "finish_batch_file", None)
 
         @self.context.console_command(
             "cut",
@@ -240,6 +245,15 @@ class ElementCore(Modifier):
                 cutcode.set_offset(context.offset_x, context.offset_y)
                 self.context.get_context('/').spooler.job(cutcode)
             self.context.get_context('/').spooler.job(self.context.registered["plan/origin"])
+
+            if self.context.finish_unlock:
+                self.context.get_context('/').spooler.job(self.context.registered['plan/unlock'])
+            if self.context.finish_beep:
+                self.context.get_context('/').spooler.job(self.context.registered['plan/beep'])
+            if self.context.finish_popup:
+                self.context.get_context('/').spooler.job(self.context.registered['plan/report'])
+            if self.context.finish_batch:
+                self.context.get_context('/').spooler.job(self.context.registered['plan/batch'])
             return "op", data
 
         @self.context.console_command(
