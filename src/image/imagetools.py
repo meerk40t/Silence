@@ -123,11 +123,13 @@ def plugin(kernel, lifecycle=None):
         elements.add(paths, type="elem")
         return "elements", paths
 
+    @context.console_option("invert", "i", type=bool, action="store_true", help="Invert the raster in raster wizard")
+    @context.console_option("step", "s", type=int, help="set the step amount")
     @context.console_argument("script", help="script to apply", type=str)
     @context.console_command(
         "wizard", help="apply image wizard", input_type="image", output_type="elements"
     )
-    def image(command, channel, _, data, script, args=tuple(), **kwargs):
+    def image(command, channel, _, data, script, step=None, invert=None, args=tuple(), **kwargs):
         if script is None:
             try:
                 for script_name in context.match("raster_script", True):
@@ -137,12 +139,23 @@ def plugin(kernel, lifecycle=None):
             return
 
         try:
-            script = context.registered["raster_script/%s" % script]
+            script = copy(context.registered["raster_script/%s" % script])
         except KeyError:
             channel(_("Raster Script %s is not registered.") % script)
             return
-
+        if step is not None:
+            for s in script:
+                if s['name'] == 'resample':
+                    s['step'] = step
+            for element in data:
+                element.transform.a = float(step)
+                element.transform.d = float(step)
+        if invert is not None:
+            for s in script:
+                if s['name'] == 'grayscale':
+                    s['invert'] = True
         for element in data:
+
             (
                 element.image,
                 element.transform,
@@ -152,8 +165,6 @@ def plugin(kernel, lifecycle=None):
                 element.values["raster_step"] = step
             element.image_width, element.image_height = element.image.size
             element.lock = True
-            if hasattr(element, "node"):
-                element.node.altered()
         return "image", data
 
     @context.console_command(

@@ -27,20 +27,13 @@ from .widget import (
 MILS_IN_MM = 39.3701
 
 _ = wx.GetTranslation
-supported_languages = (
-    ("en", u"English", wx.LANGUAGE_ENGLISH),
-    ("it", u"italiano", wx.LANGUAGE_ITALIAN),
-    ("fr", u"français", wx.LANGUAGE_FRENCH),
-    ("de", u"Deutsch", wx.LANGUAGE_GERMAN),
-    ("es", u"español", wx.LANGUAGE_SPANISH),
-    ("zh", u"Chinese", wx.LANGUAGE_CHINESE),
-)
 
 
 class Silence(MWindow, Job):
     def __init__(self, *args, **kwds):
         super().__init__(815, 624, *args, **kwds)
         Job.__init__(self, job_name="refresh_scene", process=self.refresh_scene, interval=0.05)
+        self.Bind(wx.EVT_DROP_FILES, self.on_drop_file)
         self.context.setting(int, "draw_mode", 0xFF)
         self.context.setting(float, "units_convert", MILS_IN_MM)
         self.context.setting(str, "units_name", "mm")
@@ -516,8 +509,6 @@ class Silence(MWindow, Job):
 
         self.Bind(wx.EVT_SIZE, self.on_size)
 
-        self.Bind(wx.EVT_DROP_FILES, self.on_drop_file)
-
         @self.context.console_command("refresh", help="Silence refresh")
         def refresh(command, channel, _, args=tuple(), **kwargs):
             self.Layout()
@@ -551,6 +542,7 @@ class Silence(MWindow, Job):
         self.context.setting(bool, "rotary_enable", False)
         self.context.setting(bool, "group_engrave", False)
         self.context.setting(bool, "group_vector", False)
+        self.context.setting(int, "raster_step", 2)
         self.text_jog_step.SetValue(str(self.context.jog_step))
         self.text_move_x.SetValue(str(self.context.move_x))
         self.text_move_y.SetValue(str(self.context.move_y))
@@ -626,11 +618,15 @@ class Silence(MWindow, Job):
     def load(self, pathname):
         self.context.setting(bool, "uniform_svg", False)
         self.context.setting(float, "svg_ppi", 96.0)
+        self.context.setting(int, "raster_step", 2)
+        self.context.setting(bool, "invert", False)
+        c = "-i " if self.context.invert else ""
         self.context("raster clear\ncut clear\nengrave clear\n")
         self.context.working_file = pathname
         with wx.BusyInfo(_("Loading File...")):
             if pathname.endswith("svg"):
-                self.context('inkscape locate input "%s" text2path load makepng load image wizard Gravy\n' % pathname)
+
+                self.context('inkscape locate input "%s" text2path load makepng -s %d load image step %d wizard %s-s %d Gravy\n' % (pathname, self.context.raster_step,  self.context.raster_step, c, self.context.raster_step))
                 return True
 
             results = self.context.load(
@@ -638,8 +634,9 @@ class Silence(MWindow, Job):
                 channel=self.context.channel("load"),
                 svg_ppi=self.context.svg_ppi,
             )
-            if pathname.lower().endswith("png") or pathname.lower().endswith("jpg"):
-                self.context("image wizard Gravy\n")
+            lpath = pathname.lower()
+            if lpath.endswith(("png", "jpg", "bmp", "jpeg", "jpe")):
+                self.context("image wizard %s-s %d Gravy\n" % (c,  self.context.raster_step))
             self.request_refresh()
             return bool(results)
 

@@ -75,6 +75,8 @@ class LaserRender:
                     matrix = Matrix(image.transform)
                 except AttributeError:
                     matrix = Matrix()
+                step = cut.settings.raster_step
+                matrix.post_scale(step, step)
                 matrix.post_translate(x,y)
                 gc.PushState()
                 gc.ConcatTransform(wx.GraphicsContext.CreateMatrix(gc, ZMatrix(matrix)))

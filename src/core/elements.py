@@ -27,7 +27,6 @@ class ElementCore(Modifier):
         self.raster_settings = LaserSettings(
             operation="Raster", color="black", speed=100.0, passes_custom=True, passes=1,
         )
-        self.raster_settings.raster_step = 2
         self.gcode = CutCode()
         self.gcode_settings = LaserSettings(
             operation="GCode", color="black", speed=140.0, passes_custom=True, passes=1,
@@ -57,6 +56,7 @@ class ElementCore(Modifier):
                 settings.raster_step = int(object_image.values["raster_step"])
             except KeyError:
                 settings.raster_step = 1
+
             direction = settings.raster_direction
             settings.crosshatch = False
             if direction == 4:

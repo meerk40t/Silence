@@ -33,6 +33,17 @@ def plugin(kernel, lifecycle):
         gui.MainLoop()
 
 
+_ = wx.GetTranslation
+supported_languages = (
+    ("en", u"English", wx.LANGUAGE_ENGLISH),
+    ("it", u"italiano", wx.LANGUAGE_ITALIAN),
+    ("fr", u"français", wx.LANGUAGE_FRENCH),
+    ("de", u"Deutsch", wx.LANGUAGE_GERMAN),
+    ("es", u"español", wx.LANGUAGE_SPANISH),
+    ("zh", u"Chinese", wx.LANGUAGE_CHINESE),
+)
+
+
 class SilenceApp(wx.App, Module):
     def __init__(self, context, path):
         wx.App.__init__(self, 0)
