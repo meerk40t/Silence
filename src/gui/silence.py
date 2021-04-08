@@ -23,6 +23,7 @@ from .widget import (
     GuideWidget, RasterImageWidget, VectorEngraveWidget, VectorCutWidget, TimeEstimateWidget, GCodePathsWidget,
     ReticleWidget,
 )
+from ..device.lasercommandconstants import COMMAND_WAIT_FINISH, COMMAND_FUNCTION
 
 MILS_IN_MM = 39.3701
 
@@ -543,6 +544,15 @@ class Silence(MWindow, Job):
         self.context.setting(bool, "group_engrave", False)
         self.context.setting(bool, "group_vector", False)
         self.context.setting(int, "raster_step", 2)
+
+        self.context.setting(bool, "finish_unlock", False)
+        self.context.setting(bool, "finish_beep", False)
+        self.context.setting(bool, "finish_batch", False)
+        self.context.setting(bool, "finish_popup", False)
+        self.context.setting(str, "finish_batch_file", None)
+
+        self.context.register("plan/report", self.report)
+        self.context.register("plan/batch", self.batch)
         self.text_jog_step.SetValue(str(self.context.jog_step))
         self.text_move_x.SetValue(str(self.context.move_x))
         self.text_move_y.SetValue(str(self.context.move_y))
@@ -639,6 +649,32 @@ class Silence(MWindow, Job):
                 self.context("image wizard %s-s %d Gravy\n" % (c,  self.context.raster_step))
             self.request_refresh()
             return bool(results)
+
+    def report(self):
+        yield COMMAND_WAIT_FINISH
+
+        def rep():
+            dlg = wx.MessageDialog(
+                None, _("Process Completed"), _("Report"), wx.OK
+            )
+            dlg.ShowModal()
+            dlg.Destroy()
+
+        yield COMMAND_FUNCTION, rep
+
+    def batch(self):
+        batch_file = self.context.finish_batch_file
+        if batch_file is None:
+            return
+        if not len(batch_file):
+            return
+        yield COMMAND_WAIT_FINISH
+
+        def bat():
+            from subprocess import run, PIPE
+            c = run([batch_file], stdout=PIPE)
+            print(c.stdout)
+        yield COMMAND_FUNCTION, bat
 
     def on_drop_file(self, event):
         """

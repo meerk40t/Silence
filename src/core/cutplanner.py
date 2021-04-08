@@ -15,6 +15,14 @@ from ..kernel import Modifier
 def plugin(kernel, lifecycle=None):
     if lifecycle == "register":
         kernel.register("modifier/Planner", Planner)
+        kernel.register("plan/home", Planner.home)
+        kernel.register("plan/origin", Planner.origin)
+        kernel.register("plan/unlock", Planner.unlock)
+        kernel.register("plan/wait", Planner.wait)
+        kernel.register("plan/beep", Planner.beep)
+        kernel.register("plan/interrupt", Planner.interrupt)
+        kernel.register("plan/report", Planner.report)
+        kernel.register("plan/batch", Planner.batch)
     elif lifecycle == "boot":
         kernel_root = kernel.get_context("/")
         kernel_root.activate("modifier/Planner")
@@ -69,15 +77,6 @@ class Planner(Modifier):
         self.context.setting(bool, "opt_rapid_between", False)
         self.context.setting(int, "opt_jog_minimum", 127)
         self.context.setting(int, "opt_jog_mode", 0)
-
-        kernel.register("plan/home", self.home)
-        kernel.register("plan/origin", self.origin)
-        kernel.register("plan/unlock", self.unlock)
-        kernel.register("plan/wait", self.wait)
-        kernel.register("plan/beep", self.beep)
-        kernel.register("plan/interrupt", self.interrupt)
-        kernel.register("plan/report", self.report)
-        kernel.register("plan/batch", self.batch)
 
         # REQUIRES CUTPLANNER
 
@@ -669,9 +668,8 @@ class Planner(Modifier):
     @staticmethod
     def batch():
         yield COMMAND_WAIT_FINISH
-
         def bat():
-            print("Execute Batch File.")
+            print("Batch file.")
 
         yield COMMAND_FUNCTION, bat
 
