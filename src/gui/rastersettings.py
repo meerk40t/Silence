@@ -62,15 +62,14 @@ class RasterSettings(MWindow):
             self.slider_raster_transition,
         )
         # end wxGlade
-        self.context.setting(int, "raster_step", 2)
-        self.context.setting(bool, "raster_bottom", False)
         self.context.setting(bool, "halftone", True)
         self.context.setting(int, "halftone_resolution", 2)
         self.context.setting(float, "halftone_black", 2.5)
         self.context.setting(float, "halftone_white", 0.50)
         self.context.setting(float, "halftone_transition", 3.5)
-        self.text_scanline_step.SetValue(str(self.context.raster_step / 1000.0))
-        self.check_bottom_up.SetValue(self.context.raster_bottom)
+        step = self.context.elements.raster_settings.raster_step
+        self.text_scanline_step.SetValue(str(step / 1000.0))
+        self.check_bottom_up.SetValue(self.context.elements.raster_settings.raster_direction)
         self.check_halftone.SetValue(self.context.halftone)
         self.slider_raster_black.SetValue(self.context.halftone_black)
         self.slider_raster_white.SetValue(self.context.halftone_white)
@@ -158,14 +157,15 @@ class RasterSettings(MWindow):
 
     def on_text_scanline_step(self, event):  # wxGlade: RasterSettings.<event_handler>
         try:
-            self.context.raster_step = int(
+
+            self.context.elements.raster_settings.raster_step = int(
                 float(self.text_scanline_step.GetValue()) * 1000
             )
         except ValueError:
             pass
 
     def on_check_bottom2top(self, event):  # wxGlade: RasterSettings.<event_handler>
-        self.context.raster_bottom = self.check_bottom_up.GetValue()
+        self.context.elements.raster_settings.raster_direction = 1 if self.check_bottom_up.GetValue() else 0
 
     def on_check_halftone(self, event):  # wxGlade: RasterSettings.<event_handler>
         self.context.halftone = bool(self.check_halftone.GetValue())
