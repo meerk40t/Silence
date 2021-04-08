@@ -1237,9 +1237,19 @@ class Silence(MWindow, Job):
 
     def on_check_mirror(self, event):  # wxGlade: Silence.<event_handler>
         self.context.mirror = bool(self.checkbox_mirror.GetValue())
+        if self.context.mirror:
+            self.context.elements.raster.mirror()
+            self.context.elements.cut.mirror()
+            self.context.elements.engrave.mirror()
+            self.context.elements.gcode.mirror()
 
     def on_check_rotate(self, event):  # wxGlade: Silence.<event_handler>
         self.context.rotate = bool(self.checkbox_rotate.GetValue())
+        self.context.elements.raster.rotate()
+        self.context.elements.cut.rotate()
+        self.context.elements.engrave.rotate()
+        self.context.elements.gcode.rotate()
+        self.request_refresh()
 
     def on_check_csys(self, event):  # wxGlade: Silence.<event_handler>
         self.context.csys = bool(self.checkbox_csys.GetValue())

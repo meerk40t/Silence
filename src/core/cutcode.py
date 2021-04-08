@@ -120,6 +120,14 @@ class CutCode(list):
         parts.append("%d items" % len(self))
         return "CutCode(%s)" % " ".join(parts)
 
+    def mirror(self):
+        for item in self:
+            item.mirror()
+
+    def rotate(self):
+        for item in self:
+            item.rotate()
+
     def set_offset(self, x, y):
         self.offset_x = x
         self.offset_y = y
@@ -243,6 +251,13 @@ class CutObject:
         else:
             return -1
 
+    def mirror(self):
+        pass
+
+    def rotate(self):
+        self._start.x, self._start.y = self._start.y, self._start.x
+        self._end.x, self._end.y = self._end.y, self._end.x
+
     def reverse(self):
         self._start, self._end = self._end, self._start
 
@@ -267,6 +282,10 @@ class QuadCut(CutObject):
         settings.raster_step = 0
         self.control = control_point
 
+    def rotate(self):
+        CutObject.rotate(self)
+        self.control.x, self.control.y = self.control.y, self.control.x
+
     def generator(self):
         return ZinglPlotter.plot_quad_bezier(
             self._start[0],
@@ -284,6 +303,11 @@ class CubicCut(CutObject):
         settings.raster_step = 0
         self.control1 = control1
         self.control2 = control2
+
+    def rotate(self):
+        CutObject.rotate(self)
+        self.control1.x, self.control1.y = self.control1.y, self.control1.x
+        self.control2.x, self.control2.y = self.control2.y, self.control2.x
 
     def reverse(self):
         self.control1, self.control2 = self.control2, self.control1
@@ -395,6 +419,18 @@ class RasterCut(CutObject):
 
     def end(self):
         return Point(self.plot.final_position_in_scene())
+
+    def mirror(self):
+        from PIL import ImageOps
+        self.image.image = ImageOps.mirror(self.image.image)
+
+    def rotate(self):
+        from PIL import Image
+        self.image.image = self.image.image.transpose(Image.ROTATE_90)
+        self.image.image_height, self.image.image_width = (
+            self.image.image_width,
+            self.image.image_height,
+        )
 
     def major_axis(self):
         return 0 if self.plot.horizontal else 1

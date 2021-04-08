@@ -106,6 +106,21 @@ def plugin(kernel, lifecycle):
             return "inkscape", (inkscape_path, filename)
 
         @kernel.console_command(
+            "bounds",
+            help="determine svg bounds",
+            input_type="inkscape",
+            output_type="inkscape",
+        )
+        def bounds(channel, _, data, **kwargs):
+            inkscape_path, filename = data
+            if not os.path.exists(inkscape_path):
+                channel(_("Inkscape not found."))
+                return
+            c = run([inkscape_path, "--query-all"], stdout=PIPE)
+            channel(c.stdout)
+            return "inkscape", data
+
+        @kernel.console_command(
             "version",
             help="determine inkscape version",
             input_type="inkscape",
