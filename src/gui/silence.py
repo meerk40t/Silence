@@ -514,7 +514,7 @@ class Silence(MWindow, Job):
         self.Bind(wx.EVT_BUTTON, self.on_button_vector_cut, self.button_cut)
         self.Bind(wx.EVT_TEXT, self.on_text_cut_speed, self.text_cut_speed)
         self.Bind(wx.EVT_BUTTON, self.on_button_pause_stop, self.button_pause_stop)
-        self.Bind(wx.EVT_CHECKBOX, self.on_check_halftone, self.checkbox_wizard)
+        self.Bind(wx.EVT_CHECKBOX, self.on_check_wizard, self.checkbox_wizard)
         self.Bind(wx.EVT_CHECKBOX, self.on_check_invert, self.checkbox_invert)
         self.Bind(wx.EVT_CHECKBOX, self.on_check_mirror, self.checkbox_mirror)
         self.Bind(wx.EVT_CHECKBOX, self.on_check_rotate, self.checkbox_rotate)
@@ -567,7 +567,7 @@ class Silence(MWindow, Job):
         self.context.setting(float, "jog_step", 10.0)
         self.context.setting(float, "move_x", 0.0)
         self.context.setting(float, "move_y", 0.0)
-        self.context.setting(bool, "halftone", True)
+        self.context.setting(bool, "wizard", True)
         self.context.setting(bool, "invert", False)
         self.context.setting(bool, "mirror", False)
         self.context.setting(bool, "rotate", False)
@@ -592,7 +592,7 @@ class Silence(MWindow, Job):
         self.text_raster_speed.SetValue(str(self.context.raster_settings.speed))
         self.text_engrave_speed.SetValue(str(self.context.engrave_settings.speed))
         self.text_cut_speed.SetValue(str(self.context.cut_settings.speed))
-        self.checkbox_wizard.SetValue(self.context.halftone)
+        self.checkbox_wizard.SetValue(self.context.wizard)
         self.checkbox_invert.SetValue(self.context.invert)
         self.checkbox_rotate.SetValue(self.context.rotate)
         self.checkbox_csys.SetValue(self.context.csys)
@@ -610,7 +610,8 @@ class Silence(MWindow, Job):
         self.toggle_advance_settings()
 
         self.context.listen("rotary_enable", self.on_rotary_enable)
-        self.context.listen("halftone", self.on_halftone)
+        self.context.listen("wizard", self.on_wizard)
+        self.context.listen("invert", self.on_invert)
         self.context.listen("op_setting_update", self.on_op_setting_update)
         self.context.listen("refresh_scene", self.on_refresh_scene)
         self.context.listen("bed_size", self.on_bed_changed)
@@ -753,8 +754,11 @@ class Silence(MWindow, Job):
             dlg.ShowModal()
             dlg.Destroy()
 
-    def on_halftone(self, *args, **kwargs):
-        self.checkbox_wizard.SetValue(self.context.halftone)
+    def on_wizard(self, *args, **kwargs):
+        self.checkbox_wizard.SetValue(self.context.wizard)
+
+    def on_invert(self, *args, **kwargs):
+        self.checkbox_invert.SetValue(self.context.invert)
 
     def on_rotary_enable(self, *args, **kwargs):
         self.checkbox_rotary_enable.SetValue(self.context.rotary_enable)
@@ -778,7 +782,8 @@ class Silence(MWindow, Job):
         self.context("quit\n")
         self.context.unlisten("statusbar", self.on_statusbar)
         self.context.unlisten("rotary_enable", self.on_rotary_enable)
-        self.context.unlisten("halftone", self.on_halftone)
+        self.context.unlisten("wizard", self.on_wizard)
+        self.context.unlisten("invert", self.on_invert)
         self.context.unlisten("op_setting_update", self.on_op_setting_update)
         self.context.unlisten("bed_size", self.on_bed_changed)
         self.context.unlisten("units", self.on_space_changed)
@@ -1296,12 +1301,13 @@ class Silence(MWindow, Job):
             self.context("resume\n")
         dlg.Destroy()
 
-    def on_check_halftone(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.halftone = bool(self.checkbox_wizard.GetValue())
-        self.context.signal("halftone", self.context.halftone)
+    def on_check_wizard(self, event):  # wxGlade: Silence.<event_handler>
+        self.context.wizard = bool(self.checkbox_wizard.GetValue())
+        self.context.signal("wizard", self.context.wizard)
 
     def on_check_invert(self, event):  # wxGlade: Silence.<event_handler>
         self.context.invert = bool(self.checkbox_invert.GetValue())
+        self.context.signal("invert", self.context.invert)
 
     def on_check_mirror(self, event):  # wxGlade: Silence.<event_handler>
         self.context.mirror = bool(self.checkbox_mirror.GetValue())

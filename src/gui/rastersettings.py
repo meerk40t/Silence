@@ -42,13 +42,15 @@ class RasterSettings(MWindow):
         self.check_bottom_up.SetValue(
             self.context.elements.raster_settings.raster_direction
         )
-        self.check_wizard.SetValue(self.context.halftone)
+        self.check_wizard.SetValue(self.context.wizard)
         self.combo_wizard.SetValue(self.context.wizard_script)
 
+        self.context.listen("invert", self.on_invert)
         self.context.listen("wizard", self.on_wizard)
 
     def window_close(self):
         self.context.unlisten("wizard", self.on_wizard)
+        self.context.unlisten("invert", self.on_invert)
 
     def __set_properties(self):
         # begin wxGlade: RasterSettings.__set_properties
@@ -78,6 +80,9 @@ class RasterSettings(MWindow):
 
     def on_wizard(self, *args, **kwargs):
         self.check_wizard.SetValue(self.context.wizard)
+
+    def on_invert(self, *args, **kwargs):
+        self.check_invert.SetValue(self.context.invert)
 
     def on_text_scanline_step(self, event):  # wxGlade: RasterSettings.<event_handler>
         try:
