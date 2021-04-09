@@ -59,22 +59,22 @@ class ElementCore(Modifier):
             passes=1,
         )
 
-    def engrave_cutcode(self, objects):
+    def engrave_cutcode(self, objects: list):
         c = self.engrave
         settings = self.engrave_settings
         self._vector_cutcode(c, settings, objects)
 
-    def cut_cutcode(self, objects):
+    def cut_cutcode(self, objects: list):
         c = self.cut
         settings = self.cut_settings
         self._vector_cutcode(c, settings, objects)
 
-    def gcode_cutcode(self, objects):
+    def gcode_cutcode(self, objects: list):
         c = self.gcode
         settings = self.gcode_settings
         self._vector_cutcode(c, settings, objects)
 
-    def image_cutcode(self, objects):
+    def image_cutcode(self, objects: list):
         c = self.raster
         settings = self.raster_settings
         for object_image in objects:
@@ -95,7 +95,7 @@ class ElementCore(Modifier):
                 c.append(RasterCut(object_image, settings))
         return c
 
-    def raster_cutcode(self, objects):
+    def raster_cutcode(self, objects: list):
         c = self.raster
         settings = self.raster_settings
         direction = settings.raster_direction

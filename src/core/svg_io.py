@@ -85,13 +85,13 @@ class SVGLoader:
                     elements_modifier.engrave_cutcode(abs(Path(element)))
                 else:
                     elements_modifier.raster_cutcode(abs(Path(element)))
-            elif isinstance(element, SVGImage):
-                try:
-                    element.load(os.path.dirname(pathname))
-                    if element.image is not None:
-                        elements_modifier.raster_cutcode(abs(element))
-                except OSError:
-                    pass
+            # elif isinstance(element, SVGImage):
+            #     try:
+            #         element.load(os.path.dirname(pathname))
+            #         if element.image is not None:
+            #             elements_modifier.raster_cutcode(abs(element))
+            #     except OSError:
+            #         pass
             elif isinstance(element, SVG):
                 continue
             elif isinstance(element, Group):
