@@ -61,8 +61,8 @@ class DxfLoader:
                 elements, dxf, entity, scale, bed_dim.bed_height * MILS_PER_MM
             )
 
-        kernel.setting(bool, "dxf_center", True)
-        if kernel.dxf_center:
+        kernel.setting(bool, "csys", False)
+        if not kernel.csys:
             g = Group()
             g.extend(elements)
             bbox = g.bbox()
