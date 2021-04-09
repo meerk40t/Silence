@@ -119,7 +119,7 @@ class EgvSave(MWindow):
         self.context.egvsave_gcode = bool(self.check_gcode.GetValue())
 
     def on_button_save(self, event):  # wxGlade: EgvSave.<event_handler>
-        self.context.console("egv_save")
+        self.context.console("egv_save\n")
 
 
 # end of class EgvSave
