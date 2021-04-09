@@ -8,11 +8,20 @@ MILS_IN_MM = 39.3701
 class EgvSave(MWindow):
     def __init__(self, *args, **kwds):
         super().__init__(403, 163, *args, **kwds)
+        self.context.setting(bool, "egvsave_cut", True)
+        self.context.setting(bool, "egvsave_engrave", True)
+        self.context.setting(bool, "egvsave_raster", True)
+        self.context.setting(bool, "egvsave_gcode", False)
         self.panel_24 = wx.Panel(self, wx.ID_ANY)
         self.check_raster = wx.CheckBox(self.panel_24, wx.ID_ANY, "Raster Engrave")
+        self.check_raster.SetValue(self.context.egvsave_raster)
         self.check_engrave = wx.CheckBox(self.panel_24, wx.ID_ANY, "Vector Engrave")
+        self.check_engrave.SetValue(self.context.egvsave_engrave)
         self.check_cut = wx.CheckBox(self.panel_24, wx.ID_ANY, "Vector Cut")
+        self.check_cut.SetValue(self.context.egvsave_cut)
         self.check_gcode = wx.CheckBox(self.panel_24, wx.ID_ANY, "GCode Operation")
+        self.check_gcode.SetValue(self.context.egvsave_gcode)
+
         self.button_save = wx.Button(self.panel_24, wx.ID_ANY, "Save")
 
         self.__set_properties()
@@ -40,7 +49,6 @@ class EgvSave(MWindow):
         self.check_raster.SetToolTip(
             "Save the Raster Engrave data to an EGV file. The file will contain the data that would be sent to the laser if the Raster Engrave button was pressed."
         )
-        self.check_raster.SetValue(1)
         self.check_engrave.SetFont(
             wx.Font(
                 12,
@@ -54,7 +62,6 @@ class EgvSave(MWindow):
         self.check_engrave.SetToolTip(
             "Save the Vector Engrave data to an EGV file. The file will contain the data that would be sent to the laser if the Vector Engrave button was pressed."
         )
-        self.check_engrave.SetValue(1)
         self.check_cut.SetFont(
             wx.Font(
                 12,
@@ -68,7 +75,6 @@ class EgvSave(MWindow):
         self.check_cut.SetToolTip(
             "Save the Vector Cut data to an EGV file. The file will contain the data that would be sent to the laser if the Vector Cut button was pressed."
         )
-        self.check_cut.SetValue(1)
         self.check_gcode.SetFont(
             wx.Font(
                 12,
@@ -101,16 +107,16 @@ class EgvSave(MWindow):
         # end wxGlade
 
     def on_check_egv_raster(self, event):  # wxGlade: EgvSave.<event_handler>
-        self.context.egvsave_raster = self.check_raster.Value
+        self.context.egvsave_raster = bool(self.check_raster.GetValue())
 
     def on_check_egv_engrave(self, event):  # wxGlade: EgvSave.<event_handler>
-        self.context.egvsave_engrave = self.check_engrave.Value
+        self.context.egvsave_engrave = bool(self.check_engrave.GetValue())
 
     def on_check_egv_cut(self, event):  # wxGlade: EgvSave.<event_handler>
-        self.context.egvsave_cut = self.check_cut.Value
+        self.context.egvsave_cut = bool(self.check_cut.GetValue())
 
     def on_check_egv_gcode(self, event):  # wxGlade: EgvSave.<event_handler>
-        self.context.egvsave_gcode = self.check_gcode.Value
+        self.context.egvsave_gcode = bool(self.check_gcode.GetValue())
 
     def on_button_save(self, event):  # wxGlade: EgvSave.<event_handler>
         self.context.console("egv_save")
