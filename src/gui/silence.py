@@ -266,6 +266,15 @@ class Silence(MWindow, Job):
         wxglade_tmp_menu.Append(wx.ID_ANY, "USB", wxglade_tmp_menu_sub, "")
         self.silence_menubar.Append(wxglade_tmp_menu, "Tools")
         wxglade_tmp_menu = wx.Menu()
+        self.silence_menubar.raster_wizard = wxglade_tmp_menu.Append(
+            wx.ID_ANY, "RasterWizard\tF10", "Opens the RasterWizard window."
+        )
+        self.Bind(
+            wx.EVT_MENU,
+            self.on_menu_settings_rasterwizard,
+            id=self.silence_menubar.raster_wizard.GetId(),
+        )
+
         self.silence_menubar.settings_general = wxglade_tmp_menu.Append(
             wx.ID_ANY, "General Settings\tF2", "Opens the General Settings window."
         )
@@ -1163,6 +1172,9 @@ class Silence(MWindow, Job):
 
     def on_menu_release_usb(self, event):  # wxGlade: Silence.<event_handler>
         self.context.console("device release\n")
+
+    def on_menu_settings_rasterwizard(self, event):  # wxGlade: Silence.<event_handler>
+        self.context.console("window open RasterWizard\n")
 
     def on_menu_settings_general(self, event):  # wxGlade: Silence.<event_handler>
         self.context.console("window open GeneralSettings\n")
