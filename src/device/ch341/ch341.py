@@ -118,11 +118,13 @@ class CH341(Module, Handler):
         handlers = []
         try:
             from .libusb import Handler as LibUsbHandler
+
             handlers.append(LibUsbHandler(channel=self.channel, status=self.status))
         except ImportError:
             self.channel(_("PyUsb is not installed. Skipping."))
         try:
             from .windll import Handler as WinHandler
+
             handlers.append(WinHandler(channel=self.channel, status=self.status))
         except ImportError:
             self.channel(_("No Windll interfacing. Skipping."))
@@ -139,7 +141,9 @@ class CH341(Module, Handler):
             for i in range(16):
                 for driver_handler in handlers:
                     try:
-                        return self._connect_attempt(driver_handler, i, chipv, bus, address)
+                        return self._connect_attempt(
+                            driver_handler, i, chipv, bus, address
+                        )
                     except ConnectionRefusedError:
                         pass
 

@@ -2,9 +2,21 @@ from math import isinf, isnan
 
 from ..svgelements import Color, Path, Point
 
-from ..device.lasercommandconstants import COMMAND_PLOT, COMMAND_PLOT_START, COMMAND_SET_OFFSET
-from .rasterplotter import (BOTTOM, LEFT, RIGHT, TOP, UNIDIRECTIONAL, X_AXIS,
-                            Y_AXIS, RasterPlotter)
+from ..device.lasercommandconstants import (
+    COMMAND_PLOT,
+    COMMAND_PLOT_START,
+    COMMAND_SET_OFFSET,
+)
+from .rasterplotter import (
+    BOTTOM,
+    LEFT,
+    RIGHT,
+    TOP,
+    UNIDIRECTIONAL,
+    X_AXIS,
+    Y_AXIS,
+    RasterPlotter,
+)
 from .zinglplotter import ZinglPlotter
 
 """
@@ -422,10 +434,12 @@ class RasterCut(CutObject):
 
     def mirror(self):
         from PIL import ImageOps
+
         self.image.image = ImageOps.mirror(self.image.image)
 
     def rotate(self):
         from PIL import Image
+
         self.image.image = self.image.image.transpose(Image.ROTATE_90)
         self.image.image_height, self.image.image_width = (
             self.image.image_width,

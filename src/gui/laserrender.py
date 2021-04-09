@@ -1,5 +1,5 @@
 import wx
-from ..svgelements import (Color, Matrix)
+from ..svgelements import Color, Matrix
 
 from .zmatrix import ZMatrix
 from ..core.cutcode import LineCut, QuadCut, CubicCut, CutCode, RasterCut
@@ -49,7 +49,9 @@ class LaserRender:
         self.raster_pen.SetWidth(10)
         self.gcode_pen.SetWidth(10)
 
-    def render_cutcode(self, cutcode: CutCode, gc: wx.GraphicsContext, x: int = 0, y: int = 0):
+    def render_cutcode(
+        self, cutcode: CutCode, gc: wx.GraphicsContext, x: int = 0, y: int = 0
+    ):
         last_point = None
         p = gc.CreatePath()
         for cut in cutcode:
@@ -60,7 +62,9 @@ class LaserRender:
             if isinstance(cut, LineCut):
                 p.AddLineToPoint(end[0] + x, end[1] + y)
             elif isinstance(cut, QuadCut):
-                p.AddQuadCurveToPoint(cut.control[0] + x, cut.control[1] + y, end[0] + x, end[1] + y)
+                p.AddQuadCurveToPoint(
+                    cut.control[0] + x, cut.control[1] + y, end[0] + x, end[1] + y
+                )
             elif isinstance(cut, CubicCut):
                 p.AddCurveToPoint(
                     cut.control1[0] + x,
@@ -78,7 +82,7 @@ class LaserRender:
                     matrix = Matrix()
                 step = cut.settings.raster_step
                 matrix.post_scale(step, step)
-                matrix.post_translate(x,y)
+                matrix.post_translate(x, y)
                 gc.PushState()
                 gc.ConcatTransform(wx.GraphicsContext.CreateMatrix(gc, ZMatrix(matrix)))
                 cache = None
@@ -101,7 +105,9 @@ class LaserRender:
         gc.StrokePath(p)
         del p
 
-    def render_cut(self, cutcode: CutCode, gc: wx.GraphicsContext, x: int = 0, y: int = 0):
+    def render_cut(
+        self, cutcode: CutCode, gc: wx.GraphicsContext, x: int = 0, y: int = 0
+    ):
         """
         Render scene information.
         """
@@ -110,7 +116,9 @@ class LaserRender:
         gc.SetPen(self.cut_pen)
         self.render_cutcode(cutcode, gc, x, y)
 
-    def render_engrave(self, cutcode: CutCode, gc: wx.GraphicsContext, x: int = 0, y: int = 0):
+    def render_engrave(
+        self, cutcode: CutCode, gc: wx.GraphicsContext, x: int = 0, y: int = 0
+    ):
         """
         Render scene information.
         """
@@ -119,7 +127,9 @@ class LaserRender:
         gc.SetPen(self.engrave_pen)
         self.render_cutcode(cutcode, gc, x, y)
 
-    def render_raster(self, cutcode: CutCode, gc: wx.GraphicsContext, x: int = 0, y: int = 0):
+    def render_raster(
+        self, cutcode: CutCode, gc: wx.GraphicsContext, x: int = 0, y: int = 0
+    ):
         """
         Render scene information.
         """
@@ -128,7 +138,9 @@ class LaserRender:
         gc.SetPen(self.raster_pen)
         self.render_cutcode(cutcode, gc, x, y)
 
-    def render_gcode(self, cutcode: CutCode, gc: wx.GraphicsContext, x: int = 0, y: int = 0):
+    def render_gcode(
+        self, cutcode: CutCode, gc: wx.GraphicsContext, x: int = 0, y: int = 0
+    ):
         """
         Render scene information.
         """

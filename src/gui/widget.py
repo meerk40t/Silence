@@ -8,7 +8,7 @@ except ImportError:
     tau = 2 * pi
 
 from ..kernel import Module
-from ..svgelements import  Point
+from ..svgelements import Point
 from .laserrender import *
 from .zmatrix import ZMatrix
 
@@ -545,8 +545,8 @@ class RasterImageWidget(Widget):
     def __init__(self, scene, root, renderer):
         Widget.__init__(self, scene)
         context = self.scene.context
-        context.setting(int, 'offset_x', 0.0)
-        context.setting(int, 'offset_y', 0.0)
+        context.setting(int, "offset_x", 0.0)
+        context.setting(int, "offset_y", 0.0)
         self.renderer = renderer
         self.root = root
 
@@ -557,7 +557,9 @@ class RasterImageWidget(Widget):
         if self.scene.context.draw_mode & DRAW_MODE_RASTER == 0:
             return
         context = self.scene.context
-        self.renderer.render_raster(self.root.raster, gc, x=-context.offset_x, y=-context.offset_y)
+        self.renderer.render_raster(
+            self.root.raster, gc, x=-context.offset_x, y=-context.offset_y
+        )
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
         return RESPONSE_DROP
@@ -576,7 +578,9 @@ class VectorEngraveWidget(Widget):
         if self.scene.context.draw_mode & DRAW_MODE_ENGRAVE == 0:
             return
         context = self.scene.context
-        self.renderer.render_engrave(self.root.engrave, gc, x=-context.offset_x, y=-context.offset_y)
+        self.renderer.render_engrave(
+            self.root.engrave, gc, x=-context.offset_x, y=-context.offset_y
+        )
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
         return RESPONSE_DROP
@@ -595,7 +599,9 @@ class VectorCutWidget(Widget):
         if self.scene.context.draw_mode & DRAW_MODE_CUT == 0:
             return
         context = self.scene.context
-        self.renderer.render_cut(self.root.cut, gc, x=-context.offset_x, y=-context.offset_y)
+        self.renderer.render_cut(
+            self.root.cut, gc, x=-context.offset_x, y=-context.offset_y
+        )
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
         return RESPONSE_DROP
@@ -610,11 +616,13 @@ class GCodePathsWidget(Widget):
     def hit(self):
         return HITCHAIN_HIT
 
-    def process_draw(self, gc:wx.GraphicsContext):
+    def process_draw(self, gc: wx.GraphicsContext):
         if self.scene.context.draw_mode & DRAW_MODE_GCODE == 0:
             return
         context = self.scene.context
-        self.renderer.render_gcode(self.root.gcode, gc, x=-context.offset_x, y=-context.offset_y)
+        self.renderer.render_gcode(
+            self.root.gcode, gc, x=-context.offset_x, y=-context.offset_y
+        )
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
         return RESPONSE_DROP
@@ -624,8 +632,8 @@ class ReticleWidget(Widget):
     def __init__(self, scene):
         Widget.__init__(self, scene)
         context = self.scene.context
-        context.setting(int, 'offset_x', 0.0)
-        context.setting(int, 'offset_y', 0.0)
+        context.setting(int, "offset_x", 0.0)
+        context.setting(int, "offset_y", 0.0)
         self.brush = wx.Brush(wx.Colour(swizzlecolor(0x888888)))
         self.brush.SetStyle(wx.BRUSHSTYLE_CROSSDIAG_HATCH)
 
@@ -643,7 +651,7 @@ class ReticleWidget(Widget):
             y = 0
         # x, y = self.scene.convert_scene_to_window([x, y])
         size = 250
-        gc.DrawEllipse(x-size/2, y-size/2, size, size)
+        gc.DrawEllipse(x - size / 2, y - size / 2, size, size)
         gc.PopState()
 
 
@@ -661,11 +669,15 @@ class TimeEstimateWidget(Widget):
         w, h = gc.Size
         font = wx.Font(10, wx.SWISS, wx.NORMAL, wx.BOLD)
         gc.SetFont(font, wx.BLACK)
-        gc.DrawText("Raster Engrave: %s" % self.root.raster.estimate_time(), w-175, h-100)
+        gc.DrawText(
+            "Raster Engrave: %s" % self.root.raster.estimate_time(), w - 175, h - 100
+        )
         gc.SetFont(font, wx.BLUE)
-        gc.DrawText("Vector Engrave: %s" % self.root.engrave.estimate_time(), w-175, h-75)
+        gc.DrawText(
+            "Vector Engrave: %s" % self.root.engrave.estimate_time(), w - 175, h - 75
+        )
         gc.SetFont(font, wx.RED)
-        gc.DrawText("Vector Cut: %s" % self.root.cut.estimate_time(), w-175, h-50)
+        gc.DrawText("Vector Cut: %s" % self.root.cut.estimate_time(), w - 175, h - 50)
 
     def event(self, window_pos=None, space_pos=None, event_type=None):
         return RESPONSE_DROP

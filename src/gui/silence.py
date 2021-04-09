@@ -8,19 +8,40 @@ import threading
 
 import wx
 
-from src.gui.icons import (icon_CC, icon_down, icon_left, icon_LL, icon_LR,
-                           icon_right, icon_UL, icon_up, icon_UR)
+from src.gui.icons import (
+    icon_CC,
+    icon_down,
+    icon_left,
+    icon_LL,
+    icon_LR,
+    icon_right,
+    icon_UL,
+    icon_up,
+    icon_UR,
+)
 from src.gui.mwindow import MWindow
 from src.kernel import Job
 from .laserrender import (
     DRAW_MODE_FLIPXY,
     DRAW_MODE_INVERT,
-    LaserRender, DRAW_MODE_GCODE, DRAW_MODE_CUT, DRAW_MODE_RASTER, DRAW_MODE_ENGRAVE,
-    DRAW_MODE_ESTIMATE, DRAW_MODE_ZOOM, DRAW_MODE_REFRESH, DRAW_MODE_ANIMATE,
+    LaserRender,
+    DRAW_MODE_GCODE,
+    DRAW_MODE_CUT,
+    DRAW_MODE_RASTER,
+    DRAW_MODE_ENGRAVE,
+    DRAW_MODE_ESTIMATE,
+    DRAW_MODE_ZOOM,
+    DRAW_MODE_REFRESH,
+    DRAW_MODE_ANIMATE,
 )
 from .widget import (
     GridWidget,
-    GuideWidget, RasterImageWidget, VectorEngraveWidget, VectorCutWidget, TimeEstimateWidget, GCodePathsWidget,
+    GuideWidget,
+    RasterImageWidget,
+    VectorEngraveWidget,
+    VectorCutWidget,
+    TimeEstimateWidget,
+    GCodePathsWidget,
     ReticleWidget,
 )
 from ..device.lasercommandconstants import COMMAND_WAIT_FINISH, COMMAND_FUNCTION
@@ -33,7 +54,9 @@ _ = wx.GetTranslation
 class Silence(MWindow, Job):
     def __init__(self, *args, **kwds):
         super().__init__(815, 624, *args, **kwds)
-        Job.__init__(self, job_name="refresh_scene", process=self.refresh_scene, interval=0.05)
+        Job.__init__(
+            self, job_name="refresh_scene", process=self.refresh_scene, interval=0.05
+        )
         self.Bind(wx.EVT_DROP_FILES, self.on_drop_file)
         self.context.setting(int, "draw_mode", 0xFF)
         self.context.setting(float, "units_convert", MILS_IN_MM)
@@ -373,8 +396,8 @@ class Silence(MWindow, Job):
         )
         self.button_pause_stop = wx.Button(self.panel_3, wx.ID_ANY, "Pause/Stop")
         self.advanced_settings = wx.Panel(self, wx.ID_ANY)
-        self.checkbox_halftone = wx.CheckBox(
-            self.advanced_settings, wx.ID_ANY, "Halftone (Dither)"
+        self.checkbox_wizard = wx.CheckBox(
+            self.advanced_settings, wx.ID_ANY, "Apply RasterWizard"
         )
         self.checkbox_invert = wx.CheckBox(
             self.advanced_settings, wx.ID_ANY, "Invert Raster Color"
@@ -433,13 +456,23 @@ class Silence(MWindow, Job):
         self.scene.Bind(wx.EVT_LEFT_UP, self.on_left_mouse_up)
 
         self.widget_scene.add_scenewidget(ReticleWidget(self.widget_scene))
-        self.widget_scene.add_scenewidget(VectorEngraveWidget(self.widget_scene, self.context.elements, self.renderer))
-        self.widget_scene.add_scenewidget(VectorCutWidget(self.widget_scene, self.context.elements, self.renderer))
-        self.widget_scene.add_scenewidget(GCodePathsWidget(self.widget_scene, self.context.elements, self.renderer))
-        self.widget_scene.add_scenewidget(RasterImageWidget(self.widget_scene, self.context.elements, self.renderer))
+        self.widget_scene.add_scenewidget(
+            VectorEngraveWidget(self.widget_scene, self.context.elements, self.renderer)
+        )
+        self.widget_scene.add_scenewidget(
+            VectorCutWidget(self.widget_scene, self.context.elements, self.renderer)
+        )
+        self.widget_scene.add_scenewidget(
+            GCodePathsWidget(self.widget_scene, self.context.elements, self.renderer)
+        )
+        self.widget_scene.add_scenewidget(
+            RasterImageWidget(self.widget_scene, self.context.elements, self.renderer)
+        )
         self.widget_scene.add_scenewidget(GridWidget(self.widget_scene))
         self.widget_scene.add_interfacewidget(GuideWidget(self.widget_scene))
-        self.widget_scene.add_interfacewidget(TimeEstimateWidget(self.widget_scene, self.context.elements))
+        self.widget_scene.add_interfacewidget(
+            TimeEstimateWidget(self.widget_scene, self.context.elements)
+        )
 
         try:
             self.scene.Bind(wx.EVT_MAGNIFY, self.on_magnify_mouse)
@@ -481,7 +514,7 @@ class Silence(MWindow, Job):
         self.Bind(wx.EVT_BUTTON, self.on_button_vector_cut, self.button_cut)
         self.Bind(wx.EVT_TEXT, self.on_text_cut_speed, self.text_cut_speed)
         self.Bind(wx.EVT_BUTTON, self.on_button_pause_stop, self.button_pause_stop)
-        self.Bind(wx.EVT_CHECKBOX, self.on_check_halftone, self.checkbox_halftone)
+        self.Bind(wx.EVT_CHECKBOX, self.on_check_halftone, self.checkbox_wizard)
         self.Bind(wx.EVT_CHECKBOX, self.on_check_invert, self.checkbox_invert)
         self.Bind(wx.EVT_CHECKBOX, self.on_check_mirror, self.checkbox_mirror)
         self.Bind(wx.EVT_CHECKBOX, self.on_check_rotate, self.checkbox_rotate)
@@ -559,7 +592,7 @@ class Silence(MWindow, Job):
         self.text_raster_speed.SetValue(str(self.context.raster_settings.speed))
         self.text_engrave_speed.SetValue(str(self.context.engrave_settings.speed))
         self.text_cut_speed.SetValue(str(self.context.cut_settings.speed))
-        self.checkbox_halftone.SetValue(self.context.halftone)
+        self.checkbox_wizard.SetValue(self.context.halftone)
         self.checkbox_invert.SetValue(self.context.invert)
         self.checkbox_rotate.SetValue(self.context.rotate)
         self.checkbox_csys.SetValue(self.context.csys)
@@ -567,8 +600,12 @@ class Silence(MWindow, Job):
         self.checkbox_rotary_enable.SetValue(self.context.rotary_enable)
         self.checkbox_group_vector.SetValue(self.context.group_vector)
         self.checkbox_group_engrave.SetValue(self.context.group_engrave)
-        self.text_raster_passes.SetValue(str(self.context.raster_settings.implicit_passes))
-        self.text_engrave_passes.SetValue(str(self.context.engrave_settings.implicit_passes))
+        self.text_raster_passes.SetValue(
+            str(self.context.raster_settings.implicit_passes)
+        )
+        self.text_engrave_passes.SetValue(
+            str(self.context.engrave_settings.implicit_passes)
+        )
         self.text_cut_passes.SetValue(str(self.context.cut_settings.implicit_passes))
         self.toggle_advance_settings()
 
@@ -617,7 +654,12 @@ class Silence(MWindow, Job):
             defaultDir = "."
 
         with wx.FileDialog(
-                self, _("Open"), defaultDir=defaultDir, defaultFile=defaultFile, wildcard=files, style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
+            self,
+            _("Open"),
+            defaultDir=defaultDir,
+            defaultFile=defaultFile,
+            wildcard=files,
+            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST,
         ) as fileDialog:
             fileDialog.SetFilename(defaultFile)
             if fileDialog.ShowModal() == wx.ID_CANCEL:
@@ -636,7 +678,16 @@ class Silence(MWindow, Job):
         with wx.BusyInfo(_("Loading File...")):
             if pathname.endswith("svg"):
 
-                self.context('inkscape locate input "%s" text2path load makepng -s %d load image step %d wizard %s-s %d Gravy\n' % (pathname, self.context.raster_step,  self.context.raster_step, c, self.context.raster_step))
+                self.context(
+                    'inkscape locate input "%s" text2path load makepng -s %d load image step %d wizard %s-s %d Gravy\n'
+                    % (
+                        pathname,
+                        self.context.raster_step,
+                        self.context.raster_step,
+                        c,
+                        self.context.raster_step,
+                    )
+                )
                 return True
 
             results = self.context.load(
@@ -646,7 +697,9 @@ class Silence(MWindow, Job):
             )
             lpath = pathname.lower()
             if lpath.endswith(("png", "jpg", "bmp", "jpeg", "jpe")):
-                self.context("image wizard %s-s %d Gravy\n" % (c,  self.context.raster_step))
+                self.context(
+                    "image wizard %s-s %d Gravy\n" % (c, self.context.raster_step)
+                )
             self.request_refresh()
             return bool(results)
 
@@ -654,9 +707,7 @@ class Silence(MWindow, Job):
         yield COMMAND_WAIT_FINISH
 
         def rep():
-            dlg = wx.MessageDialog(
-                None, _("Process Completed"), _("Report"), wx.OK
-            )
+            dlg = wx.MessageDialog(None, _("Process Completed"), _("Report"), wx.OK)
             dlg.ShowModal()
             dlg.Destroy()
 
@@ -672,8 +723,10 @@ class Silence(MWindow, Job):
 
         def bat():
             from subprocess import run, PIPE
+
             c = run([batch_file], stdout=PIPE)
             print(c.stdout)
+
         yield COMMAND_FUNCTION, bat
 
     def on_drop_file(self, event):
@@ -701,14 +754,18 @@ class Silence(MWindow, Job):
             dlg.Destroy()
 
     def on_halftone(self, *args, **kwargs):
-        self.checkbox_halftone.SetValue(self.context.halftone)
+        self.checkbox_wizard.SetValue(self.context.halftone)
 
     def on_rotary_enable(self, *args, **kwargs):
         self.checkbox_rotary_enable.SetValue(self.context.rotary_enable)
 
     def on_op_setting_update(self, *args, **kwargs):
-        self.text_raster_passes.SetValue(str(self.context.raster_settings.implicit_passes))
-        self.text_engrave_passes.SetValue(str(self.context.engrave_settings.implicit_passes))
+        self.text_raster_passes.SetValue(
+            str(self.context.raster_settings.implicit_passes)
+        )
+        self.text_engrave_passes.SetValue(
+            str(self.context.engrave_settings.implicit_passes)
+        )
         self.text_cut_passes.SetValue(str(self.context.cut_settings.implicit_passes))
         self.text_raster_speed.SetValue(str(self.context.raster_settings.speed))
         self.text_engrave_speed.SetValue(str(self.context.engrave_settings.speed))
@@ -730,7 +787,13 @@ class Silence(MWindow, Job):
     def on_statusbar(self, message=None, color=None):
         if message is None:
             silence_statusbar_fields = [
-                "Current Position: X=%f Y=%f (W X H)=(%fmm X %fmm)" % (self.context.offset_x, self.context.offset_y, self.context.offset_width, self.context.offset_height),
+                "Current Position: X=%f Y=%f (W X H)=(%fmm X %fmm)"
+                % (
+                    self.context.offset_x,
+                    self.context.offset_y,
+                    self.context.offset_width,
+                    self.context.offset_height,
+                ),
             ]
         else:
             silence_statusbar_fields = [
@@ -753,7 +816,9 @@ class Silence(MWindow, Job):
 
     def __set_properties(self):
         # begin wxGlade: Silence.__set_properties
-        self.SetTitle("%s v%s" % (self.context._kernel.name, self.context._kernel.version))
+        self.SetTitle(
+            "%s v%s" % (self.context._kernel.name, self.context._kernel.version)
+        )
         self.silence_statusbar.SetStatusWidths([-1])
 
         # statusbar fields
@@ -840,10 +905,10 @@ class Silence(MWindow, Job):
             "Stop the running laser job. Pressing this button will pause sending the current job data to the laser and pop up a dialog box asking if you want to cancel the remainder of the job. The laser head may not stop instantly because there is some data that has already been sent to the laser controller board. The laser will finish running the data it has received before it stops."
         )
         self.panel_6.SetMinSize((200, 0))
-        self.checkbox_halftone.SetToolTip(
+        self.checkbox_wizard.SetToolTip(
             "Turn on or off halftone (dither). Turning this option on converts any input grayscale images into dots that are spaced to approximate a grayscale image when engraved. This is similar to the process used to produce images for newsprint. The stock controller board does not have the capability to control the laser power so dithering is the only way to get grayscale images using the stock controller. You can also dither the image before loading it."
         )
-        self.checkbox_halftone.SetValue(1)
+        self.checkbox_wizard.SetValue(1)
         self.checkbox_invert.SetToolTip(
             "Inverts the colors in the raster image. This has the effect of turning the raster image into the negative of the original image so white is black and so on."
         )
@@ -987,7 +1052,7 @@ class Silence(MWindow, Job):
         sizer_19.Add(label_9, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         static_line_3 = wx.StaticLine(self.advanced_settings, wx.ID_ANY)
         sizer_19.Add(static_line_3, 0, wx.EXPAND, 0)
-        sizer_19.Add(self.checkbox_halftone, 1, 0, 0)
+        sizer_19.Add(self.checkbox_wizard, 1, 0, 0)
         sizer_19.Add(self.checkbox_invert, 1, 0, 0)
         static_line_4 = wx.StaticLine(self.advanced_settings, wx.ID_ANY)
         sizer_19.Add(static_line_4, 0, wx.EXPAND, 0)
@@ -1189,7 +1254,9 @@ class Silence(MWindow, Job):
 
     def on_text_raster_speed(self, event):  # wxGlade: Silence.<event_handler>
         try:
-            self.context.raster_settings.speed = float(self.text_raster_speed.GetValue())
+            self.context.raster_settings.speed = float(
+                self.text_raster_speed.GetValue()
+            )
         except ValueError:
             pass
 
@@ -1198,7 +1265,9 @@ class Silence(MWindow, Job):
 
     def on_text_engrave_speed(self, event):  # wxGlade: Silence.<event_handler>
         try:
-            self.context.engrave_settings.speed = float(self.text_engrave_speed.GetValue())
+            self.context.engrave_settings.speed = float(
+                self.text_engrave_speed.GetValue()
+            )
         except ValueError:
             pass
 
@@ -1215,8 +1284,7 @@ class Silence(MWindow, Job):
         self.context("pause\n")
         dlg = wx.MessageDialog(
             None,
-            _("Press OK to abort.\n"
-              "Cancel to resume the job."),
+            _("Press OK to abort.\n" "Cancel to resume the job."),
             _("Stop Laser Sending?"),
             wx.OK | wx.CANCEL | wx.ICON_WARNING,
         )
@@ -1229,7 +1297,7 @@ class Silence(MWindow, Job):
         dlg.Destroy()
 
     def on_check_halftone(self, event):  # wxGlade: Silence.<event_handler>
-        self.context.halftone = bool(self.checkbox_halftone.GetValue())
+        self.context.halftone = bool(self.checkbox_wizard.GetValue())
         self.context.signal("halftone", self.context.halftone)
 
     def on_check_invert(self, event):  # wxGlade: Silence.<event_handler>
@@ -1269,13 +1337,17 @@ class Silence(MWindow, Job):
 
     def on_text_raster_engrave_passes(self, event):  # wxGlade: Silence.<event_handler>
         try:
-            self.context.raster_settings.passes = int(self.text_raster_passes.GetValue())
+            self.context.raster_settings.passes = int(
+                self.text_raster_passes.GetValue()
+            )
         except ValueError:
             pass
 
     def on_text_vector_engrave_passes(self, event):  # wxGlade: Silence.<event_handler>
         try:
-            self.context.engrave_settings.passes = int(self.text_engrave_passes.GetValue())
+            self.context.engrave_settings.passes = int(
+                self.text_engrave_passes.GetValue()
+            )
         except ValueError:
             pass
 

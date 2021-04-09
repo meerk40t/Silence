@@ -1,6 +1,6 @@
 import os
 
-from ..svgelements import (SVG, Group, Path, Shape, SVGImage, SVGText)
+from ..svgelements import SVG, Group, Path, Shape, SVGImage, SVGText
 
 MILS_PER_MM = 39.3701
 
@@ -36,9 +36,7 @@ class SVGLoader:
             color="none",
             transform="scale(%f)" % scale_factor,
         )
-        return SVGLoader.parse(
-            svg, elements_modifier, pathname
-        )
+        return SVGLoader.parse(svg, elements_modifier, pathname)
 
     @staticmethod
     def parse(svg, elements_modifier, pathname):

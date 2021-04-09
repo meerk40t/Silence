@@ -1,4 +1,15 @@
-from ..svgelements import Color, SVGImage, Path, Polygon, Move, Close, Line, QuadraticBezier, CubicBezier, Arc
+from ..svgelements import (
+    Color,
+    SVGImage,
+    Path,
+    Polygon,
+    Move,
+    Close,
+    Line,
+    QuadraticBezier,
+    CubicBezier,
+    Arc,
+)
 
 from ..kernel import Modifier
 from .cutcode import CutCode, LaserSettings, LineCut, QuadCut, CubicCut, RasterCut
@@ -17,19 +28,35 @@ class ElementCore(Modifier):
         Modifier.__init__(self, context, name, channel)
         self.engrave = CutCode()
         self.engrave_settings = LaserSettings(
-            operation="Engrave", color="blue", speed=20.0, passes_custom=True, passes=1,
+            operation="Engrave",
+            color="blue",
+            speed=20.0,
+            passes_custom=True,
+            passes=1,
         )
         self.cut = CutCode()
         self.cut_settings = LaserSettings(
-            operation="Cut", color="red", speed=10.0, passes_custom=True, passes=1,
+            operation="Cut",
+            color="red",
+            speed=10.0,
+            passes_custom=True,
+            passes=1,
         )
         self.raster = CutCode()
         self.raster_settings = LaserSettings(
-            operation="Raster", color="black", speed=100.0, passes_custom=True, passes=1,
+            operation="Raster",
+            color="black",
+            speed=100.0,
+            passes_custom=True,
+            passes=1,
         )
         self.gcode = CutCode()
         self.gcode_settings = LaserSettings(
-            operation="GCode", color="black", speed=140.0, passes_custom=True, passes=1,
+            operation="GCode",
+            color="black",
+            speed=140.0,
+            passes_custom=True,
+            passes=1,
         )
 
     def engrave_cutcode(self, objects):
@@ -93,13 +120,13 @@ class ElementCore(Modifier):
             if isinstance(object_path, SVGImage):
                 box = object_path.bbox()
                 plot = Path(
-                        Polygon(
-                            (box[0], box[1]),
-                            (box[0], box[3]),
-                            (box[2], box[3]),
-                            (box[2], box[1]),
-                            )
-                        )
+                    Polygon(
+                        (box[0], box[1]),
+                        (box[0], box[3]),
+                        (box[2], box[3]),
+                        (box[2], box[1]),
+                    )
+                )
             else:
                 # Is a shape or path.
                 if not isinstance(object_path, Path):
@@ -160,17 +187,13 @@ class ElementCore(Modifier):
         self.context.setting(str, "finish_batch_file", None)
 
         @self.context.console_command(
-            "cut",
-            help="starts an op chain",
-            output_type="op"
+            "cut", help="starts an op chain", output_type="op"
         )
         def op_init(command, **kwargs):
             return "op", ("cut", self.cut, self.cut_settings)
 
         @self.context.console_command(
-            "engrave",
-            help="starts an op chain",
-            output_type="op"
+            "engrave", help="starts an op chain", output_type="op"
         )
         def op_init(command, **kwargs):
             return "op", ("engrave", self.engrave, self.engrave_settings)
@@ -178,11 +201,11 @@ class ElementCore(Modifier):
         @self.context.console_command(
             "raster",
             help="starts an op chain",
-            input_type=(None, 'image'),
-            output_type="op"
+            input_type=(None, "image"),
+            output_type="op",
         )
         def op_init(command, data_type, data, **kwargs):
-            if data_type == 'image':
+            if data_type == "image":
                 self.raster_cutcode(data)
             return "op", ("raster", self.raster, self.raster_settings)
 
@@ -197,17 +220,14 @@ class ElementCore(Modifier):
             help="value",
         )
         @self.context.console_command(
-            "set",
-            help="set <setting> <value>",
-            output_type="op",
-            input_type="op"
+            "set", help="set <setting> <value>", output_type="op", input_type="op"
         )
         def op_set(channel, _, data=None, setting=None, value=None, **kwargs):
             name, cutcode, op_set = data
             if setting is None:
                 channel(_("%s Settings:" % name))
                 for setv in dir(op_set):
-                    if setv.startswith('_') or setv.startswith('implicit'):
+                    if setv.startswith("_") or setv.startswith("implicit"):
                         continue
                     v = getattr(op_set, setv)
                     if not isinstance(v, (int, float, str, complex, Color)):
@@ -243,17 +263,27 @@ class ElementCore(Modifier):
 
             for i in range(op_set.implicit_passes):
                 cutcode.set_offset(context.offset_x, context.offset_y)
-                self.context.get_context('/').spooler.job(cutcode)
-            self.context.get_context('/').spooler.job(self.context.registered["plan/origin"])
+                self.context.get_context("/").spooler.job(cutcode)
+            self.context.get_context("/").spooler.job(
+                self.context.registered["plan/origin"]
+            )
 
             if self.context.finish_unlock:
-                self.context.get_context('/').spooler.job(self.context.registered['plan/unlock'])
+                self.context.get_context("/").spooler.job(
+                    self.context.registered["plan/unlock"]
+                )
             if self.context.finish_beep:
-                self.context.get_context('/').spooler.job(self.context.registered['plan/beep'])
+                self.context.get_context("/").spooler.job(
+                    self.context.registered["plan/beep"]
+                )
             if self.context.finish_popup:
-                self.context.get_context('/').spooler.job(self.context.registered['plan/report'])
+                self.context.get_context("/").spooler.job(
+                    self.context.registered["plan/report"]
+                )
             if self.context.finish_batch:
-                self.context.get_context('/').spooler.job(self.context.registered['plan/batch'])
+                self.context.get_context("/").spooler.job(
+                    self.context.registered["plan/batch"]
+                )
             return "op", data
 
         @self.context.console_command(
@@ -288,7 +318,7 @@ class ElementCore(Modifier):
         settings = context.derive("settings")
         settings.clear_persistent()
 
-        op_set = settings.derive('engrave')
+        op_set = settings.derive("engrave")
         for key in dir(self.engrave_settings):
             if key.startswith("_") or key.startswith("implicit"):
                 continue
@@ -299,7 +329,7 @@ class ElementCore(Modifier):
                 value = value.value
             op_set.write_persistent(key, value)
 
-        op_set = settings.derive('cut')
+        op_set = settings.derive("cut")
         for key in dir(self.cut_settings):
             if key.startswith("_") or key.startswith("implicit"):
                 continue
@@ -310,7 +340,7 @@ class ElementCore(Modifier):
                 value = value.value
             op_set.write_persistent(key, value)
 
-        op_set = settings.derive('raster')
+        op_set = settings.derive("raster")
         for key in dir(self.raster_settings):
             if key.startswith("_") or key.startswith("implicit"):
                 continue
@@ -321,7 +351,7 @@ class ElementCore(Modifier):
                 value = value.value
             op_set.write_persistent(key, value)
 
-        op_set = settings.derive('gcode')
+        op_set = settings.derive("gcode")
         for key in dir(self.gcode_settings):
             if key.startswith("_") or key.startswith("implicit"):
                 continue
@@ -335,13 +365,13 @@ class ElementCore(Modifier):
 
     def boot(self, *a, **kwargs):
         settings = self.context.derive("settings")
-        op_set = settings.derive('engrave')
+        op_set = settings.derive("engrave")
         op_set.load_persistent_object(self.engrave_settings)
-        op_set = settings.derive('cut')
+        op_set = settings.derive("cut")
         op_set.load_persistent_object(self.cut_settings)
-        op_set = settings.derive('raster')
+        op_set = settings.derive("raster")
         op_set.load_persistent_object(self.raster_settings)
-        op_set = settings.derive('gcode')
+        op_set = settings.derive("gcode")
         op_set.load_persistent_object(self.gcode_settings)
         self.raster_settings.raster_step = 2
 

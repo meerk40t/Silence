@@ -1,6 +1,6 @@
-
 def plugin(kernel, lifecycle):
     if lifecycle == "register":
+
         @kernel.console_argument("page", help="Webhelp page", type=str)
         @kernel.console_command("webhelp", help="Launch a registered webhelp page")
         def webhelp(channel, _, page=None, **kwargs):
@@ -33,8 +33,10 @@ def plugin(kernel, lifecycle):
             else:
                 channel(_("Webhelp not found."))
 
-        kernel.register("webhelp/manual", "https://www.scorchworks.com/K40whisperer/k40whisperer.html")
+        kernel.register(
+            "webhelp/manual",
+            "https://www.scorchworks.com/K40whisperer/k40whisperer.html",
+        )
         kernel.register("webhelp/webpage", "https://github.com/meerk40t/Silence/wiki")
         kernel.register("webhelp/about", "https://github.com/meerk40t/Silence")
         kernel.register("webhelp/issues", "https://github.com/meerk40t/Silence/issues")
-

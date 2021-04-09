@@ -25,8 +25,8 @@ PLOT_DIRECTION = 32
 def plugin(kernel, lifecycle=None):
     if lifecycle == "register":
         kernel.register("modifier/Spooler", Spooler)
-        context = kernel.get_context('/')
-        bed_dim = kernel.get_context('bed')
+        context = kernel.get_context("/")
+        bed_dim = kernel.get_context("bed")
         bed_dim.setting(float, "bed_width", 325.0)
         bed_dim.setting(float, "bed_height", 220.0)
 
@@ -66,16 +66,12 @@ def plugin(kernel, lifecycle=None):
             return move
 
         @context.console_option("path", "p", type=str, help="Path to Device")
-        @context.console_command(
-            "device",
-            help="device",
-            output_type="device"
-        )
+        @context.console_command("device", help="device", output_type="device")
         def device(channel, _, path=None, **kwargs):
             if path is None:
                 device_context = context.active
                 if device_context is None:
-                    device_context = context.get_context('1')
+                    device_context = context.get_context("1")
             else:
                 device_context = context.get_context(path)
             if not hasattr(device_context, "spooler"):
@@ -147,7 +143,11 @@ def plugin(kernel, lifecycle=None):
             try:
                 data.activate("device/%s" % device)
             except KeyError:
-                channel(_("Device %s is not valid type. 'device type' for a list of valid types."))
+                channel(
+                    _(
+                        "Device %s is not valid type. 'device type' for a list of valid types."
+                    )
+                )
                 return
             data.offset_x = 0
             data.offset_y = 0
@@ -185,7 +185,6 @@ def plugin(kernel, lifecycle=None):
                 return "device", data
             except AttributeError:
                 channel(_("Device Uninitialized."))
-
 
         @context.console_command(
             "spooler",
@@ -233,26 +232,43 @@ def plugin(kernel, lifecycle=None):
             channel(buffer)
             return "device", data
 
-        @context.console_command("+laser", hidden=True, input_type=("device", None), output_type='device', help="turn laser on in place")
+        @context.console_command(
+            "+laser",
+            hidden=True,
+            input_type=("device", None),
+            output_type="device",
+            help="turn laser on in place",
+        )
         def plus_laser(data, **kwargs):
             if data is None:
                 data = context.active
             spooler = data.spooler
             spooler.job(COMMAND_LASER_ON)
-            return 'device', data
+            return "device", data
 
-        @context.console_command("-laser", hidden=True, input_type=("device", None), output_type='device', help="turn laser off in place")
+        @context.console_command(
+            "-laser",
+            hidden=True,
+            input_type=("device", None),
+            output_type="device",
+            help="turn laser off in place",
+        )
         def minus_laser(data, **kwargs):
             if data is None:
                 data = context.active
             spooler = data.spooler
             spooler.job(COMMAND_LASER_ON)
-            return 'device', data
+            return "device", data
 
         @context.console_argument(
             "amount", type=Length, help="amount to move in the set direction."
         )
-        @context.console_command(("left", "right", "top", "bottom"), input_type=("device", None), output_type='device', help="cmd <amount>")
+        @context.console_command(
+            ("left", "right", "top", "bottom"),
+            input_type=("device", None),
+            output_type="device",
+            help="cmd <amount>",
+        )
         def direction(command, channel, _, data=None, amount=None, **kwargs):
             if data is None:
                 data = context.active
@@ -265,7 +281,7 @@ def plugin(kernel, lifecycle=None):
                 amount = Length("1mm")
             max_bed_height = bed_dim.bed_height * 39.3701
             max_bed_width = bed_dim.bed_width * 39.3701
-            if not hasattr(data, '_dx'):
+            if not hasattr(data, "_dx"):
                 data._dx = 0
                 data._dy = 0
             if command.endswith("right"):
@@ -277,16 +293,20 @@ def plugin(kernel, lifecycle=None):
             elif command.endswith("bottom"):
                 data._dy += amount.value(ppi=1000.0, relative_length=max_bed_height)
             context(".trigger 1 0 device -p %s jog\n" % data._path)
-            return 'device', data
+            return "device", data
 
         @context.console_command(
-            "jog", hidden=True, input_type="device", output_type='device', help="executes outstanding jog buffer"
+            "jog",
+            hidden=True,
+            input_type="device",
+            output_type="device",
+            help="executes outstanding jog buffer",
         )
         def jog(command, channel, _, data, **kwargs):
             if data is None:
                 data = context.active
             spooler = data.spooler
-            if not hasattr(data, '_dx'):
+            if not hasattr(data, "_dx"):
                 data._dx = 0
                 data._dy = 0
             idx = int(data._dx)
@@ -299,12 +319,15 @@ def plugin(kernel, lifecycle=None):
                 data._dy -= idy
             else:
                 channel(_("Busy Error"))
-            return 'device', data
+            return "device", data
 
         @context.console_argument("x", type=Length, help="change in x")
         @context.console_argument("y", type=Length, help="change in y")
         @context.console_command(
-            ("move", "move_absolute"), input_type=("device", None), output_type='device', help="move <x> <y>: move to position."
+            ("move", "move_absolute"),
+            input_type=("device", None),
+            output_type="device",
+            help="move <x> <y>: move to position.",
         )
         def move(channel, _, x, y, data=None, **kwargs):
             if data is None:
@@ -314,11 +337,16 @@ def plugin(kernel, lifecycle=None):
                 raise SyntaxError
             if not spooler.job_if_idle(execute_absolute_position(x, y)):
                 channel(_("Busy Error"))
-            return 'device', data
+            return "device", data
 
         @context.console_argument("dx", type=Length, help="change in x")
         @context.console_argument("dy", type=Length, help="change in y")
-        @context.console_command("move_relative", input_type=("device", None), output_type='device', help="move_relative <dx> <dy>")
+        @context.console_command(
+            "move_relative",
+            input_type=("device", None),
+            output_type="device",
+            help="move_relative <dx> <dy>",
+        )
         def move_relative(channel, _, dx, dy, data=None, **kwargs):
             if data is None:
                 data = context.active
@@ -327,43 +355,54 @@ def plugin(kernel, lifecycle=None):
                 raise SyntaxError
             if not spooler.job_if_idle(execute_relative_position(dx, dy)):
                 channel(_("Busy Error"))
-            return 'device', data
+            return "device", data
 
         @context.console_argument("x", type=Length, help="x offset")
         @context.console_argument("y", type=Length, help="y offset")
-        @context.console_command("home", input_type=("device", None), output_type='device', help="home the laser")
-        def home(x=None, y=None, data=None,  **kwargs):
+        @context.console_command(
+            "home",
+            input_type=("device", None),
+            output_type="device",
+            help="home the laser",
+        )
+        def home(x=None, y=None, data=None, **kwargs):
             if data is None:
                 data = context.active
             spooler = data.spooler
             if x is not None and y is not None:
-                x = x.value(
-                    ppi=1000.0, relative_length=bed_dim.bed_width * 39.3701
-                )
-                y = y.value(
-                    ppi=1000.0, relative_length=bed_dim.bed_height * 39.3701
-                )
+                x = x.value(ppi=1000.0, relative_length=bed_dim.bed_width * 39.3701)
+                y = y.value(ppi=1000.0, relative_length=bed_dim.bed_height * 39.3701)
                 spooler.job(COMMAND_HOME, int(x), int(y))
-                return 'device', data
+                return "device", data
             spooler.job(COMMAND_HOME)
             context.signal("refresh_scene", 1)
-            return 'device', data
+            return "device", data
 
-        @context.console_command("unlock", input_type=("device", None), output_type='device', help="unlock the rail")
+        @context.console_command(
+            "unlock",
+            input_type=("device", None),
+            output_type="device",
+            help="unlock the rail",
+        )
         def unlock(data=None, **kwargs):
             if data is None:
                 data = context.active
             spooler = data.spooler
             spooler.job(COMMAND_UNLOCK)
-            return 'device', data
+            return "device", data
 
-        @context.console_command("lock", input_type=("device", None), output_type='device', help="lock the rail")
+        @context.console_command(
+            "lock",
+            input_type=("device", None),
+            output_type="device",
+            help="lock the rail",
+        )
         def lock(data, **kwargs):
             if data is None:
                 data = context.active
             spooler = data.spooler
             spooler.job(COMMAND_LOCK)
-            return 'device', data
+            return "device", data
 
 
 class Device(Modifier):

@@ -7,7 +7,7 @@ MILS_IN_MM = 39.3701
 
 class GeneralSettings(MWindow):
     def __init__(self, *args, **kwds):
-        super().__init__(570, 597, *args, **kwds)
+        super().__init__(395, 417, *args, **kwds)
         self.panel_5 = wx.Panel(self, wx.ID_ANY)
         self.radio_units_inch = wx.RadioButton(self.panel_5, wx.ID_ANY, "inch")
         self.radio_units_mm = wx.RadioButton(self.panel_5, wx.ID_ANY, "mm")
@@ -18,7 +18,6 @@ class GeneralSettings(MWindow):
             self.panel_10, wx.ID_ANY, "Unlock Rail"
         )
         self.check_finish_beep = wx.CheckBox(self.panel_10, wx.ID_ANY, "Beep")
-        self.panel_13 = wx.Panel(self.panel_10, wx.ID_ANY)
         self.check_finish_popup_report = wx.CheckBox(
             self.panel_10, wx.ID_ANY, "Popup Report"
         )
@@ -26,8 +25,6 @@ class GeneralSettings(MWindow):
             self.panel_10, wx.ID_ANY, "Run Batch File:"
         )
         self.text_batch_file = wx.TextCtrl(self.panel_10, wx.ID_ANY, "")
-        self.panel_11 = wx.Panel(self, wx.ID_ANY)
-        self.check_preprocess_crc = wx.CheckBox(self.panel_11, wx.ID_ANY, "")
         self.panel_12 = wx.Panel(self, wx.ID_ANY)
         self.text_inkscape_path = wx.TextCtrl(self.panel_12, wx.ID_ANY, "")
         self.button_find_inkscape = wx.Button(self.panel_12, wx.ID_ANY, "Find Inkscape")
@@ -57,8 +54,6 @@ class GeneralSettings(MWindow):
         self.text_x_factor = wx.TextCtrl(self.panel_18, wx.ID_ANY, "1.000")
         self.panel_19 = wx.Panel(self, wx.ID_ANY)
         self.text_y_factor = wx.TextCtrl(self.panel_19, wx.ID_ANY, "1.000")
-        self.panel_20 = wx.Panel(self, wx.ID_ANY)
-        self.button_save = wx.Button(self.panel_20, wx.ID_ANY, "Save")
 
         self.__set_properties()
         self.__do_layout()
@@ -77,7 +72,6 @@ class GeneralSettings(MWindow):
             wx.EVT_CHECKBOX, self.on_check_finish_batch, self.check_finish_run_batch
         )
         self.Bind(wx.EVT_TEXT, self.on_text_batchfile, self.text_batch_file)
-        self.Bind(wx.EVT_CHECKBOX, self.on_check_preprocess, self.check_preprocess_crc)
         self.Bind(wx.EVT_TEXT, self.on_text_inkscape_path, self.text_inkscape_path)
         self.Bind(
             wx.EVT_BUTTON, self.on_button_find_inkscape, self.button_find_inkscape
@@ -93,8 +87,8 @@ class GeneralSettings(MWindow):
         self.Bind(wx.EVT_TEXT, self.on_text_bed_height, self.text_laser_height)
         self.Bind(wx.EVT_TEXT, self.on_text_x_factor, self.text_x_factor)
         self.Bind(wx.EVT_TEXT, self.on_text_y_factor, self.text_y_factor)
-        self.Bind(wx.EVT_BUTTON, self.on_button_save, self.button_save)
         # end wxGlade
+
         self.context.setting(int, "units", 0)
         self.context.setting(bool, "init_home", True)
         self.context.setting(bool, "finish_unlock", False)
@@ -107,7 +101,7 @@ class GeneralSettings(MWindow):
         self.context.setting(float, "inkscape_timeout", 3.0)
         self.context.setting(bool, "home_right", False)
         self.context.setting(str, "board", "M2")
-        self.bed_dim = self.context.get_context('bed')
+        self.bed_dim = self.context.get_context("bed")
         self.bed_dim.setting(float, "bed_width", 325.0)
         self.bed_dim.setting(float, "bed_height", 220.0)
         self.context.setting(float, "x_factor", 1.0)
@@ -125,7 +119,6 @@ class GeneralSettings(MWindow):
         self.check_finish_popup_report.SetValue(self.context.finish_popup)
         if self.context.finish_batch_file is not None:
             self.text_batch_file.SetValue(self.context.finish_batch_file)
-        self.check_preprocess_crc.SetValue(self.context.crc_preprocess)
         if self.context.inkscape_path is not None:
             self.text_inkscape_path.SetValue(self.context.inkscape_path)
         self.text_inkscape_timeout.SetValue(str(self.context.inkscape_timeout))
@@ -145,10 +138,7 @@ class GeneralSettings(MWindow):
             "This option determines if the laser will move to the home position when the laser is initialized. If Home Upon Initialize is turned off the laser will remain in the current location when it is initialized and the rail will be unlocked. The only indication that the laser properly initialized will be that a message in the status bar will say the rail successfully unlocked."
         )
         self.check_init_home.SetValue(1)
-        self.check_preprocess_crc.SetToolTip(
-            "For each packet of data sent to the laser a Cyclic Redundancy Check (CRC) code is sent to ensure the data is received correctly by the controller board. By default the CRC data is calculated before sending data to the laser. If you un-select this option you may save time by having the CRC data calculate on the fly. There is a chance the laser might pause (especially at the beginning of the job.) but the cutting and engraving should not be affected by the pauses."
-        )
-        self.check_preprocess_crc.SetValue(1)
+        self.text_batch_file.SetMinSize((400, 23))
         self.text_inkscape_path.SetToolTip(
             'The path to the Inkscape executable file "inkscape.exe".\n\nUnless your computer has a special Inkscape installation you should leave this entry blank. We will search the typical install locations for Windows and Linux.\n\nThese are the locations that will be searched:\nC:\\Program Files\\Inkscape\\inkscape.exe\nC:\\Program Files (x86)\\Inkscape\\inkscape.exe\n/usr/bin/inkscape\n/usr/local/bin/inkscape\n\nIf your Inkscape executable is not in one of these locations you will need to enter the full path to the executable file. Entering the path to a link to the file will not work in Windows (i.e. don\'t try to link your desktop icon.)\n\nIn Linux you can find the location of the executable by typing "which Inkscape" in a terminal window.\nIn Windows you can right click on your desktop icon and select properties. Then navigate to the executable.\n\nWhen you know the location of the executable you can use the Find Inkscape button to navigate to the executable and the path text will be entered in the entry field.'
         )
@@ -172,16 +162,12 @@ class GeneralSettings(MWindow):
         self.text_y_factor.SetToolTip(
             "The scale factor scales the output of your laser by the value entered. You might need to use the scale factor if you replace the pulley and belt on your Y-axis. For example if you replace the belt and find that when you make a line that is 5 inches long in Inkscape but the output is 4.5 inches you would need to change the scale factor to 5.0/4.5 = 1.111.\n\nYou can also use the Y-Scale factor to accommodate the use of a rotary axis. Since you will need to plug the rotary axis into the Y-axis motor driver. You will also likely need to change the scale factor so that the Y-Axis moves the correct amount when rotating the rotary axis. Similar to the example above the rotary axis adjustment can be determined by engraving a vertical line 1 inch long then measuring the line. You divide the input length by the actual engraved length around the circular object to get the scale factor.\n\n(input length)/(engraved length) = Needed Scale Factor\nMake sure the scale factor is set to 1.0 before performing the test described above."
         )
-        self.button_save.SetToolTip(
-            "The Save button will save all of the current settings to a configuration file. "
-        )
         # end wxGlade
 
     def __do_layout(self):
         # begin wxGlade: GeneralSettings.__do_layout
         sizer_24 = wx.BoxSizer(wx.VERTICAL)
         sizer_25 = wx.BoxSizer(wx.VERTICAL)
-        sizer_40 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_39 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_38 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_36 = wx.BoxSizer(wx.HORIZONTAL)
@@ -193,9 +179,12 @@ class GeneralSettings(MWindow):
         )
         sizer_32 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_31 = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_28 = wx.StaticBoxSizer(
+            wx.StaticBox(self.panel_10, wx.ID_ANY, "After Job Finishes:"), wx.VERTICAL
+        )
+        sizer_37 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_29 = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_28 = wx.BoxSizer(wx.HORIZONTAL)
-        grid_sizer_1 = wx.GridSizer(2, 3, 0, 0)
+        grid_sizer_1 = wx.GridSizer(1, 3, 0, 0)
         sizer_27 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_26 = wx.BoxSizer(wx.HORIZONTAL)
         label_11 = wx.StaticText(self.panel_5, wx.ID_ANY, "Units")
@@ -211,24 +200,16 @@ class GeneralSettings(MWindow):
         sizer_27.Add(self.check_init_home, 0, 0, 0)
         self.panel_8.SetSizer(sizer_27)
         sizer_25.Add(self.panel_8, 1, wx.EXPAND, 0)
-        label_16 = wx.StaticText(self.panel_10, wx.ID_ANY, "After Job Finishes:")
-        label_16.SetMinSize((150, 16))
-        sizer_28.Add(label_16, 0, 0, 0)
         grid_sizer_1.Add(self.check_finish_unlock_rail, 0, 0, 0)
         grid_sizer_1.Add(self.check_finish_beep, 0, 0, 0)
-        grid_sizer_1.Add(self.panel_13, 0, wx.EXPAND, 0)
         grid_sizer_1.Add(self.check_finish_popup_report, 0, 0, 0)
-        grid_sizer_1.Add(self.check_finish_run_batch, 0, 0, 0)
-        grid_sizer_1.Add(self.text_batch_file, 0, 0, 0)
-        sizer_28.Add(grid_sizer_1, 1, wx.EXPAND, 0)
+        sizer_29.Add(grid_sizer_1, 1, wx.EXPAND, 0)
+        sizer_28.Add(sizer_29, 1, wx.EXPAND, 0)
+        sizer_37.Add(self.check_finish_run_batch, 0, 0, 0)
+        sizer_37.Add(self.text_batch_file, 0, 0, 0)
+        sizer_28.Add(sizer_37, 1, wx.EXPAND, 0)
         self.panel_10.SetSizer(sizer_28)
         sizer_25.Add(self.panel_10, 1, wx.EXPAND, 0)
-        label_17 = wx.StaticText(self.panel_11, wx.ID_ANY, "Preprocess CRC Data")
-        label_17.SetMinSize((150, 16))
-        sizer_29.Add(label_17, 0, 0, 0)
-        sizer_29.Add(self.check_preprocess_crc, 0, 0, 0)
-        self.panel_11.SetSizer(sizer_29)
-        sizer_25.Add(self.panel_11, 1, wx.EXPAND, 0)
         static_line_6 = wx.StaticLine(self, wx.ID_ANY)
         sizer_25.Add(static_line_6, 0, wx.EXPAND, 0)
         label_18 = wx.StaticText(self.panel_12, wx.ID_ANY, "Inkscape Executable")
@@ -288,12 +269,6 @@ class GeneralSettings(MWindow):
         sizer_39.Add(self.text_y_factor, 0, 0, 0)
         self.panel_19.SetSizer(sizer_39)
         sizer_25.Add(self.panel_19, 1, wx.EXPAND, 0)
-        label_29 = wx.StaticText(self.panel_20, wx.ID_ANY, "Configuration File")
-        label_29.SetMinSize((150, 16))
-        sizer_40.Add(label_29, 0, 0, 0)
-        sizer_40.Add(self.button_save, 0, 0, 0)
-        self.panel_20.SetSizer(sizer_40)
-        sizer_25.Add(self.panel_20, 1, wx.EXPAND, 0)
         sizer_24.Add(sizer_25, 1, wx.EXPAND, 0)
         self.SetSizer(sizer_24)
         self.Layout()
@@ -323,25 +298,22 @@ class GeneralSettings(MWindow):
     def on_text_batchfile(self, event):  # wxGlade: GeneralSettings.<event_handler>
         self.context.finish_batch_file = self.text_batch_file.Value
 
-    def on_check_preprocess(self, event):  # wxGlade: GeneralSettings.<event_handler>
-        self.context.crc_preprocess = self.check_preprocess_crc.Value
-
     def on_text_inkscape_path(self, event):  # wxGlade: GeneralSettings.<event_handler>
         self.context.inkscape_path = self.text_inkscape_path.Value
 
     def on_button_find_inkscape(
-            self, event
+        self, event
     ):  # wxGlade: GeneralSettings.<event_handler>
         self.context.console("inkscape locate\n")
         self.text_inkscape_path.SetValue(self.context.inkscape_path)
 
     def on_text_inkscape_timeout(
-            self, event
+        self, event
     ):  # wxGlade: GeneralSettings.<event_handler>
         self.context.inkscape_timeout = float(self.text_inkscape_timeout.Value)
 
     def on_check_home_upper_right(
-            self, event
+        self, event
     ):  # wxGlade: GeneralSettings.<event_handler>
         self.context.home_right = self.check_home_upper_right.Value
 
@@ -378,7 +350,5 @@ class GeneralSettings(MWindow):
         except ValueError:
             pass
 
-    def on_button_save(self, event):  # wxGlade: GeneralSettings.<event_handler>
-        pass
 
 # end of class GeneralSettings

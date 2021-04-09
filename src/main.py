@@ -71,36 +71,47 @@ def run():
     kernel = Kernel("Silence", SILENCE_VERSION, "Silence", path)
 
     from .core import webhelp
+
     kernel.add_plugin(webhelp.plugin)
 
     from .image import imagetools
+
     kernel.add_plugin(imagetools.plugin)
 
     from .device import basedevice
+
     kernel.add_plugin(basedevice.plugin)
 
     from .core import inkscape
+
     kernel.add_plugin(inkscape.plugin)
 
     from .device.ch341 import ch341
+
     kernel.add_plugin(ch341.plugin)
 
     from .core import elements
+
     kernel.add_plugin(elements.plugin)
 
     from .core import cutplanner
+
     kernel.add_plugin(cutplanner.plugin)
 
     from .device.lhystudios import lhystudiosdevice
+
     kernel.add_plugin(lhystudiosdevice.plugin)
 
     from .device.moshi import moshidevice
+
     kernel.add_plugin(moshidevice.plugin)
 
     from .core import svg_io
+
     kernel.add_plugin(svg_io.plugin)
 
     from .dxf import dxf_io
+
     kernel.add_plugin(dxf_io.plugin)
 
     if not args.no_gui:

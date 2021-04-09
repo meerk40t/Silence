@@ -137,7 +137,7 @@ class SilenceApp(wx.App, Module):
         )
         @kernel.console_command("window", help="Silence window information")
         def window(
-                channel, _, subcommand=None, window=None, path=None, args=(), **kwargs
+            channel, _, subcommand=None, window=None, path=None, args=(), **kwargs
         ):
             """
             Opens a window or provides information. This command is restricted to use with the gui.
@@ -205,20 +205,18 @@ class SilenceApp(wx.App, Module):
             else:
                 raise SyntaxError
 
-        @kernel.console_argument(
-            "subcommand", type=str, help="subcommand"
+        @kernel.console_argument("subcommand", type=str, help="subcommand")
+        @kernel.console_argument("view", type=str, help="mode")
+        @kernel.console_command(
+            "view_setting", help="view_settings <toggle/set/unset> <view>"
         )
-        @kernel.console_argument(
-            "view", type=str, help="mode"
-        )
-        @kernel.console_command("view_setting", help="view_settings <toggle/set/unset> <view>")
         def toggle_draw_mode(subcommand, view, **kwargs):
             """
             Toggle the draw mode.
             """
             if view is None:
                 raise SyntaxError
-            context = kernel.get_context('/')
+            context = kernel.get_context("/")
             if view == "estimate":
                 bits = DRAW_MODE_ESTIMATE
             elif view == "gcode":
@@ -263,18 +261,20 @@ class SilenceApp(wx.App, Module):
         context = self.context
 
         try:  # pyinstaller internal location
-            _resource_path = os.path.join(sys._MEIPASS, 'locale')
+            _resource_path = os.path.join(sys._MEIPASS, "locale")
             wx.Locale.AddCatalogLookupPathPrefix(_resource_path)
         except Exception:
             pass
 
         try:  # Mac py2app resource
-            _resource_path = os.path.join(os.environ['RESOURCEPATH'], 'locale')
+            _resource_path = os.path.join(os.environ["RESOURCEPATH"], "locale")
             wx.Locale.AddCatalogLookupPathPrefix(_resource_path)
         except Exception:
             pass
 
-        wx.Locale.AddCatalogLookupPathPrefix('locale')  # Default Locale, prepended. Check this first.
+        wx.Locale.AddCatalogLookupPathPrefix(
+            "locale"
+        )  # Default Locale, prepended. Check this first.
 
         context._kernel.run_later = self.run_later
         context._kernel.translation = wx.GetTranslation

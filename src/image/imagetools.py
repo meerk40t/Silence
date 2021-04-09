@@ -16,11 +16,11 @@ def plugin(kernel, lifecycle=None):
     if lifecycle != "register":
         return
 
+    kernel.register("raster_script/Gravy", RasterScripts.raster_script_gravy())
+    kernel.register("raster_script/Newsy", RasterScripts.raster_script_newsy())
     kernel.register("raster_script/Gold", RasterScripts.raster_script_gold())
     kernel.register("raster_script/Stipo", RasterScripts.raster_script_stipo())
-    kernel.register("raster_script/Gravy", RasterScripts.raster_script_gravy())
     kernel.register("raster_script/Xin", RasterScripts.raster_script_xin())
-    kernel.register("raster_script/Newsy", RasterScripts.raster_script_newsy())
     kernel.register("raster_script/Simple", RasterScripts.raster_script_simple())
     kernel.register("load/ImageLoader", ImageLoader)
     context = kernel.get_context("/")
@@ -39,6 +39,7 @@ def plugin(kernel, lifecycle=None):
             inkscape_path, filename = data
             if filename.endswith("png"):
                 from PIL import Image
+
                 img = Image.open(filename)
 
                 svg_image = SVGImage()
@@ -123,13 +124,29 @@ def plugin(kernel, lifecycle=None):
         elements.add(paths, type="elem")
         return "elements", paths
 
-    @context.console_option("invert", "i", type=bool, action="store_true", help="Invert the raster in raster wizard")
+    @context.console_option(
+        "invert",
+        "i",
+        type=bool,
+        action="store_true",
+        help="Invert the raster in raster wizard",
+    )
     @context.console_option("step", "s", type=int, help="set the step amount")
     @context.console_argument("script", help="script to apply", type=str)
     @context.console_command(
         "wizard", help="apply image wizard", input_type="image", output_type="elements"
     )
-    def image(command, channel, _, data, script, step=None, invert=None, args=tuple(), **kwargs):
+    def image(
+        command,
+        channel,
+        _,
+        data,
+        script,
+        step=None,
+        invert=None,
+        args=tuple(),
+        **kwargs
+    ):
         if script is None:
             try:
                 for script_name in context.match("raster_script", True):
@@ -145,15 +162,15 @@ def plugin(kernel, lifecycle=None):
             return
         if step is not None:
             for s in script:
-                if s['name'] == 'resample':
-                    s['step'] = step
+                if s["name"] == "resample":
+                    s["step"] = step
             for element in data:
                 element.transform.a = float(step)
                 element.transform.d = float(step)
         if invert is not None:
             for s in script:
-                if s['name'] == 'grayscale':
-                    s['invert'] = True
+                if s["name"] == "grayscale":
+                    s["invert"] = True
         for element in data:
 
             (
@@ -814,14 +831,7 @@ def plugin(kernel, lifecycle=None):
         input_type="image",
         output_type="image",
     )
-    def halftone(
-        data,
-        oversample,
-        sample=10,
-        scale=1,
-        angle=22,
-        **kwargs
-    ):
+    def halftone(data, oversample, sample=10, scale=1, angle=22, **kwargs):
         """
         Returns half-tone image for image.
 

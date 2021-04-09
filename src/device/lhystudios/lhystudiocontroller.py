@@ -303,7 +303,6 @@ class LhystudioController(Module):
 
         context.register("control/Resume", resume_k40)
 
-
     def on_controller_ready(self, *args):
         self.start()
 

@@ -103,4 +103,5 @@ class RotarySettings(MWindow):
         except ValueError:
             pass
 
+
 # end of class RotarySettings

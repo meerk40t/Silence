@@ -115,4 +115,5 @@ class EgvSave(MWindow):
     def on_button_save(self, event):  # wxGlade: EgvSave.<event_handler>
         self.context.console("egv_save")
 
+
 # end of class EgvSave

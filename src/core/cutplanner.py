@@ -1,14 +1,31 @@
 from copy import copy
 from math import ceil, isinf, isnan
 
-from ..svgelements import (Group, Move, Path, Point,
-                         Polygon, Polyline, SVGElement, SVGImage, SVGText)
+from ..svgelements import (
+    Group,
+    Move,
+    Path,
+    Point,
+    Polygon,
+    Polyline,
+    SVGElement,
+    SVGImage,
+    SVGText,
+)
 
 from ..core.cutcode import CutCode
 from ..device.lasercommandconstants import (
-    COMMAND_BEEP, COMMAND_FUNCTION, COMMAND_HOME, COMMAND_MODE_RAPID,
-    COMMAND_MOVE, COMMAND_SET_ABSOLUTE, COMMAND_SET_POSITION, COMMAND_UNLOCK,
-    COMMAND_WAIT, COMMAND_WAIT_FINISH)
+    COMMAND_BEEP,
+    COMMAND_FUNCTION,
+    COMMAND_HOME,
+    COMMAND_MODE_RAPID,
+    COMMAND_MOVE,
+    COMMAND_SET_ABSOLUTE,
+    COMMAND_SET_POSITION,
+    COMMAND_UNLOCK,
+    COMMAND_WAIT,
+    COMMAND_WAIT_FINISH,
+)
 from ..kernel import Modifier
 
 
@@ -668,6 +685,7 @@ class Planner(Modifier):
     @staticmethod
     def batch():
         yield COMMAND_WAIT_FINISH
+
         def bat():
             print("Batch file.")
 

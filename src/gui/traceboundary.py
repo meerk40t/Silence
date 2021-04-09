@@ -7,17 +7,24 @@ MILS_IN_MM = 39.3701
 
 class TraceBoundary(MWindow):
     def __init__(self, *args, **kwds):
-        super().__init__(400, 300, *args, **kwds)
+        super().__init__(503, 195, *args, **kwds)
         self.context.setting(int, "trace_power", 100)
         self.context.setting(float, "trace_gap", 0.0)
         self.context.setting(float, "trace_speed", 50)
         self.context.setting(bool, "trace_laser_on", False)
+
         self.panel_25 = wx.Panel(self, wx.ID_ANY)
         self.checkbox_trace_laser = wx.CheckBox(self.panel_25, wx.ID_ANY, "")
         self.checkbox_trace_laser.SetValue(bool(self.context.trace_laser_on))
-        self.text_trace_power = wx.TextCtrl(self.panel_25, wx.ID_ANY, str(self.context.trace_power))
-        self.text_trace_gap = wx.TextCtrl(self.panel_25, wx.ID_ANY, str(self.context.trace_gap))
-        self.text_trace_speed = wx.TextCtrl(self.panel_25, wx.ID_ANY, str(self.context.trace_speed))
+        self.text_trace_power = wx.TextCtrl(
+            self.panel_25, wx.ID_ANY, str(self.context.trace_power)
+        )
+        self.text_trace_gap = wx.TextCtrl(
+            self.panel_25, wx.ID_ANY, str(self.context.trace_gap)
+        )
+        self.text_trace_speed = wx.TextCtrl(
+            self.panel_25, wx.ID_ANY, str(self.context.trace_speed)
+        )
         self.button_trace = wx.Button(self.panel_25, wx.ID_ANY, "Trace")
 
         self.__set_properties()
@@ -56,10 +63,9 @@ class TraceBoundary(MWindow):
         label_46 = wx.StaticText(self.panel_25, wx.ID_ANY, "ppi")
         sizer_60.Add(label_46, 0, 0, 0)
         sizer_58.Add(sizer_60, 1, wx.EXPAND, 0)
-        label_44 = wx.StaticText(
-            self.panel_25, wx.ID_ANY, "Gap Between Design and Trace"
-        )
+        label_44 = wx.StaticText(self.panel_25, wx.ID_ANY, "Outline Gap")
         label_44.SetMinSize((150, 16))
+        label_44.SetToolTip("Gap between design and trace.")
         sizer_61.Add(label_44, 0, 0, 0)
         sizer_61.Add(self.text_trace_gap, 0, 0, 0)
         label_47 = wx.StaticText(self.panel_25, wx.ID_ANY, "mm")
@@ -102,5 +108,6 @@ class TraceBoundary(MWindow):
 
     def on_button_trace(self, event):  # wxGlade: TraceBoundary.<event_handler>
         self.context.console("trace execute\n")
+
 
 # end of class TraceBoundary
